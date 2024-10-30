@@ -6,6 +6,12 @@ conda activate IDLSG2
 # deep learning tools
 pip install torch torchsummary matplotlib
 
-# HRNet dependencies
-pip install -r requirements.txt 
-
+# isntall conda api
+# COCOAPI=/path/to/clone/cocoapi
+git clone https://github.com/cocodataset/cocoapi.git 
+cd cocoapi/PythonAPI
+# Install into global site-packages
+# make install
+# Alternatively, if you do not have permissions or prefer
+# not to install the COCO API into global site-packages
+python3 setup.py install --user
