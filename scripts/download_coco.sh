@@ -2,7 +2,6 @@
 # cd into root directory of IDL_11785_Project before running
 
 sudo apt-get install wget # for Debian/Ubuntu
-mkdir data data/images
 cd data/images
 wget -c http://images.cocodataset.org/zips/val2017.zip
 wget -c http://images.cocodataset.org/zips/train2017.zip # do this later if not needed, takes time
