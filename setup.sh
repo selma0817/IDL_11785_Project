@@ -4,7 +4,9 @@ conda create --name IDLSG2 python=3.11
 conda activate IDLSG2
 
 # deep learning tools
-pip install torch torchsummary matplotlib
+pip install torch torchsummary matplotlib seaborn pandas
+# calflops for calculating flops
+pip install calflops 
 
 # isntall conda api
 # COCOAPI=/path/to/clone/cocoapi
