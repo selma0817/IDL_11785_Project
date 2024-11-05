@@ -1,7 +1,7 @@
 
 ## This is a Repo for our Convolutional Visiton Transformer (CvT) derived project for 11785 DL Class
 
-# Introduction
+## Introduction
 Our goal is to improve  CvT for classification problem to improve accuracy of classification task on MC-COCO dataset
 
 ## Innovation 
@@ -23,6 +23,10 @@ We successfully loaded the pretrained CvT-13 and CvT-21 to test on  ImageNet 1k 
 2. Accuracy
 3. Param size 
 
+
+## Todo List
+1. load pretrained ViT and ConvNext to check their performance on ImageNet 1k Validation dataset
+2. implement innovation starting from switching to Multi-Scale Feature Extraction
 
 
 
