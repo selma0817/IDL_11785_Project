@@ -1,0 +1,4 @@
+python tools/test.py --cfg /home/cehong/Desktop/IDL/Project/CvT/experiments/imagenet/cvt/cvt-13-224x224.yaml TEST.MODEL_FILE /home/cehong/Desktop/IDL/Project/CvT/ckpt/CvT-13-224x224-IN-1k.pth
+
+
+python tools/test.py --cfg /home/cehong/Desktop/IDL/Project/CvT/experiments/imagenet/cvt/cvt-13-384x384.yaml TEST.MODEL_FILE /home/cehong/Desktop/IDL/Project/CvT/ckpt/CvT-13-384x384-IN-1k.pth

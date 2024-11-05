@@ -1,0 +1,337 @@
+2024-11-04 15:56:37,060:[P:30011]:Rank[0/1] => collecting env info (might take some time)
+2024-11-04 15:56:38,422:[P:30011]:Rank[0/1] 
+PyTorch version: 1.7.1+cu110
+Is debug build: False
+CUDA used to build PyTorch: 11.0
+ROCM used to build PyTorch: N/A
+
+OS: Ubuntu 22.04.5 LTS (x86_64)
+GCC version: (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
+Clang version: Could not collect
+CMake version: version 3.22.1
+
+Python version: 3.8 (64-bit runtime)
+Is CUDA available: True
+CUDA runtime version: Could not collect
+GPU models and configuration: GPU 0: NVIDIA GeForce RTX 4070 Ti SUPER
+Nvidia driver version: 555.42.06
+cuDNN version: Could not collect
+HIP runtime version: N/A
+MIOpen runtime version: N/A
+
+Versions of relevant libraries:
+[pip3] numpy==1.24.4
+[pip3] torch==1.7.1+cu110
+[pip3] torchaudio==0.7.2
+[pip3] torchvision==0.8.2+cu110
+[conda] numpy                     1.24.4                   pypi_0    pypi
+[conda] torch                     1.7.1+cu110              pypi_0    pypi
+[conda] torchaudio                0.7.2                    pypi_0    pypi
+[conda] torchvision               0.8.2+cu110              pypi_0    pypi
+2024-11-04 15:56:38,422:[P:30011]:Rank[0/1] Namespace(cfg='/home/cehong/Desktop/IDL/Project/CvT/experiments/imagenet/cvt/cvt-13-224x224.yaml', distributed=False, local_rank=0, num_gpus=1, opts=[], port=9000)
+2024-11-04 15:56:38,422:[P:30011]:Rank[0/1] AMP:
+  ENABLED: True
+  MEMORY_FORMAT: nchw
+AUG:
+  COLOR_JITTER: [0.4, 0.4, 0.4, 0.1, 0.0]
+  DROPBLOCK_BLOCK_SIZE: 7
+  DROPBLOCK_KEEP_PROB: 1.0
+  DROPBLOCK_LAYERS: [3, 4]
+  GAUSSIAN_BLUR: 0.0
+  GRAY_SCALE: 0.0
+  INTERPOLATION: 2
+  MIXCUT: 1.0
+  MIXCUT_AND_MIXUP: False
+  MIXCUT_MINMAX: []
+  MIXUP: 0.8
+  MIXUP_MODE: batch
+  MIXUP_PROB: 1.0
+  MIXUP_SWITCH_PROB: 0.5
+  RATIO: (0.75, 1.3333333333333333)
+  SCALE: (0.08, 1.0)
+  TIMM_AUG:
+    AUTO_AUGMENT: rand-m9-mstd0.5-inc1
+    COLOR_JITTER: 0.4
+    HFLIP: 0.5
+    INTERPOLATION: bicubic
+    RE_COUNT: 1
+    RE_MODE: pixel
+    RE_PROB: 0.25
+    RE_SPLIT: False
+    USE_LOADER: True
+    USE_TRANSFORM: False
+    VFLIP: 0.0
+BASE: ['']
+CUDNN:
+  BENCHMARK: True
+  DETERMINISTIC: False
+  ENABLED: True
+DATASET:
+  DATASET: imagenet
+  DATA_FORMAT: jpg
+  LABELMAP: 
+  ROOT: /home/cehong/Desktop/IDL/Project/DATASET/imagenet
+  SAMPLER: default
+  TARGET_SIZE: -1
+  TEST_SET: val
+  TEST_TSV_LIST: []
+  TRAIN_SET: train
+  TRAIN_TSV_LIST: []
+DATA_DIR: 
+DEBUG:
+  DEBUG: False
+DIST_BACKEND: nccl
+FINETUNE:
+  BASE_LR: 0.003
+  BATCH_SIZE: 512
+  EVAL_EVERY: 3000
+  FINETUNE: False
+  FROZEN_LAYERS: []
+  LR_SCHEDULER:
+    DECAY_TYPE: step
+  TRAIN_MODE: True
+  USE_TRAIN_AUG: False
+GPUS: (0,)
+INPUT:
+  MEAN: [0.485, 0.456, 0.406]
+  STD: [0.229, 0.224, 0.225]
+LOSS:
+  LABEL_SMOOTHING: 0.1
+  LOSS: softmax
+MODEL:
+  INIT_WEIGHTS: True
+  NAME: cls_cvt
+  NUM_CLASSES: 1000
+  PRETRAINED: 
+  PRETRAINED_LAYERS: ['*']
+  SPEC:
+    ATTN_DROP_RATE: [0.0, 0.0, 0.0]
+    CLS_TOKEN: [False, False, True]
+    DEPTH: [1, 2, 10]
+    DIM_EMBED: [64, 192, 384]
+    DROP_PATH_RATE: [0.0, 0.0, 0.1]
+    DROP_RATE: [0.0, 0.0, 0.0]
+    INIT: trunc_norm
+    KERNEL_QKV: [3, 3, 3]
+    MLP_RATIO: [4.0, 4.0, 4.0]
+    NUM_HEADS: [1, 3, 6]
+    NUM_STAGES: 3
+    PADDING_KV: [1, 1, 1]
+    PADDING_Q: [1, 1, 1]
+    PATCH_PADDING: [2, 1, 1]
+    PATCH_SIZE: [7, 3, 3]
+    PATCH_STRIDE: [4, 2, 2]
+    POS_EMBED: [False, False, False]
+    QKV_BIAS: [True, True, True]
+    QKV_PROJ_METHOD: ['dw_bn', 'dw_bn', 'dw_bn']
+    STRIDE_KV: [2, 2, 2]
+    STRIDE_Q: [1, 1, 1]
+MODEL_SUMMARY: False
+MULTIPROCESSING_DISTRIBUTED: True
+NAME: cvt-13-224x224
+OUTPUT_DIR: OUTPUT/
+PIN_MEMORY: True
+PRINT_FREQ: 500
+RANK: 0
+TEST:
+  BATCH_SIZE_PER_GPU: 32
+  CENTER_CROP: True
+  IMAGE_SIZE: [224, 224]
+  INTERPOLATION: 3
+  MODEL_FILE: 
+  REAL_LABELS: False
+  VALID_LABELS: 
+TRAIN:
+  AUTO_RESUME: True
+  BATCH_SIZE_PER_GPU: 256
+  BEGIN_EPOCH: 0
+  CHECKPOINT: 
+  CLIP_GRAD_NORM: 0.0
+  DETECT_ANOMALY: False
+  END_EPOCH: 300
+  EVAL_BEGIN_EPOCH: 0
+  GAMMA1: 0.99
+  GAMMA2: 0.0
+  IMAGE_SIZE: [224, 224]
+  LR: 0.00025
+  LR_SCHEDULER:
+    ARGS:
+      cooldown_epochs: 10
+      decay_rate: 0.1
+      epochs: 300
+      min_lr: 1e-05
+      sched: cosine
+      warmup_epochs: 5
+      warmup_lr: 1e-06
+    METHOD: timm
+  MOMENTUM: 0.9
+  NESTEROV: True
+  OPTIMIZER: adamW
+  OPTIMIZER_ARGS:
+    
+  SAVE_ALL_MODELS: False
+  SCALE_LR: True
+  SHUFFLE: True
+  WD: 0.05
+  WITHOUT_WD_LIST: ['bn', 'bias', 'ln']
+VERBOSE: True
+WORKERS: 6
+2024-11-04 15:56:38,423:[P:30011]:Rank[0/1] => using 1 GPUs
+2024-11-04 15:56:38,423:[P:30011]:Rank[0/1] => saving config into: OUTPUT/imagenet/cvt-13-224x224/config.yaml
+2024-11-04 15:56:38,441:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,450:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,450:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,450:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,450:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,451:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,451:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,451:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,451:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,451:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,451:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,451:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,460:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,460:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,460:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,461:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,461:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,461:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,461:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,461:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,461:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,462:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,463:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,463:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,464:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,464:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,464:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,464:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,465:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,465:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,465:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,465:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,465:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,466:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,466:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,467:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,566:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,567:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,567:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,568:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,568:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,568:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,568:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,569:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,569:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,572:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,572:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,575:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,575:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,576:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,576:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,577:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,577:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,577:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,578:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,578:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,578:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,581:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,581:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,584:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,584:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,584:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,585:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,585:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,585:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,586:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,586:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,587:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,587:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,590:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,590:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,592:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,593:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,593:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,593:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,594:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,594:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,595:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,595:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,596:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,596:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,599:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,599:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,601:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,601:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,602:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,602:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,603:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,603:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,604:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,604:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,605:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,605:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,608:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,608:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,610:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,610:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,611:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,611:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,612:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,612:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,613:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,613:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,614:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,614:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,616:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,616:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,619:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,620:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,620:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,620:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,621:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,621:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,622:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,622:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,623:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,623:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,626:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,626:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,628:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,629:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,629:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,629:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,630:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,630:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,631:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,631:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,632:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,632:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,635:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,635:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,638:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,638:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,639:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,639:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,640:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,640:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,641:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,641:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,642:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,642:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,644:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,644:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,647:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,647:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,648:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,648:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,649:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,649:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,650:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,650:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,650:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,651:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,654:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:38,654:[P:30011]:Rank[0/1] => init weight of Linear from trunc norm
+2024-11-04 15:56:38,656:[P:30011]:Rank[0/1] => init bias of Linear to zeros
+2024-11-04 15:56:42,180:[P:30011]:Rank[0/1] => load model file: OUTPUT/imagenet/cvt-13-224x224/model_best.pth
