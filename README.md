@@ -1,5 +1,5 @@
 
-### This is a Repo for our Convolutional Visiton Transformer (CvT) derived project for 11785 DL Class
+## This is a Repo for our Convolutional Visiton Transformer (CvT) derived project for 11785 DL Class
 
 # Introduction
 Our goal is to improve  CvT for classification problem to improve accuracy of classification task on MC-COCO dataset
