@@ -1,3 +1,5 @@
+print_freq: 1
+num_classes: 100
 model : 
   name: 'swinv2_tiny_patch_window8_256'
 loss:
@@ -12,6 +14,7 @@ train:
   optimizer: 'adamW'
   weight_decay: 0.05
   without_weight_decay_list: ['bn', 'bias', 'ln']
+  clip_grad_norm: 0.0
   shuffle: true
   scheduler: 
     method: 'timm'
@@ -33,6 +36,8 @@ aug:
   scale: (0.08, 1.0)
   ratio: (3.0/4.0, 4.0/3.0)
   mixup_prob: 1.0
+  mixup_switch_prob: 0.5
+  mixup_mode: 'batch'
   mixup: 0.8
   mixcut: 1.0
   timm_aug:

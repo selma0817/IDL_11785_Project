@@ -15,6 +15,7 @@ import time
 from tqdm import tqdm
 import yaml
 from yacs.config import CfgNode as CN
+import wandb
 
 import torch
 import torch.nn.parallel
@@ -28,6 +29,7 @@ from optimizers import build_optimizer
 from schedulers import build_scheduler
 from dataloader import build_dataloader
 from criterions import build_criterion
+from trainers import get_trainer, get_tester
 
 
 
@@ -42,9 +44,6 @@ def parse_args():
     )
     parser.add_argument(
         '--config', help='options', default='swinv2_tiny_patch_window8_256.yaml'
-    )
-    parser.add_argument(
-        "--iterations", type=int, help="Number of iterations", default=1
     )
     args = parser.parse_args()
     return args
@@ -103,7 +102,18 @@ def main():
     checkpoint_dir = os.path.join('checkpoints', cfg.model.name, cfg.train.save_dir)
     scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
 
-    logging.info('=> start training')
+    logging.info('=> login to wandb')
+    wandb.login(key='ENTER key')
+    run = wandb.init(
+        name = cfg.model.name+"_"+cfg.save_dr, ## Wandb creates random run names if you skip this field
+        reinit = True, ### Allows reinitalizing runs when you re-run this cell
+        # run_id = ### Insert specific run id here if you want to resume a previous run
+        # resume = "must" ### You need this to resume previous runs, but comment out reinit = True when using this
+        project = "ENTER project", ### Project should be created in your wandb account
+        config = cfg ### Wandb Config for your run
+    )
+
+    
     for epoch in range(begin_epoch, begin_epoch+cfg.train.epoch):
         head = 'Epoch[{}]:'.format(epoch)
         logging.info('=> {} epoch start'.format(head))
@@ -114,10 +124,9 @@ def main():
 
         # train for one epoch
         logging.info('=> {} train start'.format(head))
-        with torch.autograd.set_detect_anomaly(config.TRAIN.DETECT_ANOMALY):
-            train_one_epoch(config, train_loader, model, criterion, optimizer,
-                            epoch, final_output_dir, tb_log_dir, writer_dict,
-                            scaler=scaler)
+        trainer = get_trainer(cfg.model.name)
+        top1_train, top5_train, loss_train = trainer(cfg, train_loader, model, criterion, optimizer,
+                            epoch, scaler=scaler)
         logging.info(
             '=> {} train end, duration: {:.2f}s'
             .format(head, time.time()-start)
@@ -127,42 +136,71 @@ def main():
         logging.info('=> {} validate start'.format(head))
         val_start = time.time()
 
-        if epoch >= config.TRAIN.EVAL_BEGIN_EPOCH:
-            perf = test(
-                config, valid_loader, model, criterion_eval,
-                final_output_dir, tb_log_dir, writer_dict,
-                args.distributed
-            )
+        tester = get_tester(cfg.model.name)
+        top1_val, top5_val, loss_val = tester(cfg, valid_loader, model, criterion_eval)
 
-            best_model = (perf > best_perf)
-            best_perf = perf if best_model else best_perf
+        # update best model
+        best_model = (top1_val > best_perf)
+        best_perf = top1_val if best_model else best_perf
 
         logging.info(
             '=> {} validate end, duration: {:.2f}s'
             .format(head, time.time()-val_start)
         )
-
-        # TODO: modify scheduler
-        lr_scheduler.step(epoch=epoch+1)
-        if cfg.TRAIN.LR_SCHEDULER.METHOD == 'timm':
-            lr = lr_scheduler.get_epoch_values(epoch+1)[0]
+        scheduler.step(epoch=epoch+1)
+        if cfg.train.scheduler.method == 'timm':
+            lr = scheduler.get_epoch_values(epoch+1)[0]
         else:
-            lr = lr_scheduler.get_last_lr()[0]
+            lr = scheduler.get_last_lr()[0]
         logging.info(f'=> lr: {lr}')
 
-        # TODO: save model
+        print("\tTrain Loss {:.04f}\t Learning Rate {:.07f}".format(loss_train, lr))
+        print("\tVal Top1 {:.04f}%\tVal Top5 {:.04f}%\t Val Loss {:.04f}".format(top1_val, top5_val, loss_val))
+
+        wandb.log({
+        'train_loss': loss_train,
+        'valid_top1': top1_val,
+        'valid_top5': top5_val,
+        'valid_loss': loss_val,
+        'lr'        : lr
+        })
+
+        # save model
         if best_model:
+            best_path = os.path.join(checkpoint_dir, 'model_best.pth')
             save_model(
-                model, args.distributed, checkpoint_dir, 'model_best.pth'
+                model, optimizer, scheduler, best_path
             )
-        if config.train.save_epoch_models:
-            save_model()
+            wandb.save(best_path)
+            
+        if cfg.train.save_epoch_models:
+            last_path = os.path.join(checkpoint_dir, 'model_last.pth')
+            save_model(model, optimizer, scheduler, last_path)
+            wandb.save(last_path)
 
         logging.info(
             '=> {} epoch end, duration : {:.2f}s'
             .format(head, time.time()-start)
         )
     logging.info('=> finish training')
+
+def save_model(model, optimizer, scheduler, path):
+    torch.save(
+        {'model_state_dict'         : model.state_dict(),
+         'optimizer_state_dict'     : optimizer.state_dict(),
+         'scheduler_state_dict'     : scheduler.state_dict()},
+         path
+    )
+
+def load_model(path, model, optimizer= None, scheduler= None):
+    checkpoint = torch.load(path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    if optimizer != None:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    if scheduler != None:
+        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+
+    return [model, optimizer, scheduler]
 
 if __name__ == '__main__':
     main()
