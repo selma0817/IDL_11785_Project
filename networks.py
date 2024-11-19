@@ -1657,3 +1657,34 @@ def pretrained_cvt_21_224():
             verbose=False
         )
     return model
+
+
+########################################################################################
+########################################################################################
+####################                                                ####################
+####################                     utils                      ####################
+####################                                                ####################
+########################################################################################
+########################################################################################
+
+# load models for training
+def build_model(model_name='swinv2_tiny_patch_window8_256'):
+    # swinv2
+    if model_name == 'swinv2_tiny_patch_window8_256':
+        return swinv2_tiny_patch4_window8_256()
+    elif model_name == 'swinv2_base_patch_window8_256':
+        return swinv2_base_patch4_window8_256()
+    # convnextv2
+    elif model_name == 'convnextv2_tiny':
+        return convnextv2_tiny()
+    elif model_name == 'convnextv2_base':
+        return convnextv2_base()
+    # cvt
+    elif model_name == 'cvt_13_224':
+        return cvt_13_224()
+    elif model_name == 'cvt_21_224':
+        return cvt_21_224()
+    # raise exception
+    else:
+        raise Exception('model does not exist, see configs for options')
+

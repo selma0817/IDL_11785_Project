@@ -4,94 +4,107 @@ from __future__ import print_function
 
 import argparse
 import logging
+logging.basicConfig(
+        level=logging.INFO,  # Minimum log level to capture
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+logger = logging.getLogger(__name__)
 import os
 import pprint
 import time
+from tqdm import tqdm
+import yaml
+from yacs.config import CfgNode as CN
 
 import torch
 import torch.nn.parallel
 import torch.optim
 from torch.utils.collect_env import get_pretty_env_info
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(device)
+
+from networks import build_model
+from optimizers import build_optimizer
+from schedulers import build_scheduler
+from dataloader import build_dataloader
+from criterions import build_criterion
 
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Train classification network')
-
+    parser.add_argument(
+        '--mode', help='train or test', default='train'
+    )
+    parser.add_argument(
+        '--model', help='options: swinv2, convnextv2, cvt', default='cvt'
+    )
+    parser.add_argument(
+        '--config', help='options', default='swinv2_tiny_patch_window8_256.yaml'
+    )
     parser.add_argument(
         "--iterations", type=int, help="Number of iterations", default=1
     )
-
+    args = parser.parse_args()
     return args
 
 
 def main():
     args = parse_args()
 
-
-    #update_config(config, args)
-    #final_output_dir = create_logger(config, args.cfg, 'train')
-    # tb_log_dir = final_output_dir
-    """
-    if comm.is_main_process():
-        logging.info("=> collecting env info (might take some time)")
-        logging.info("\n" + get_pretty_env_info())
-        logging.info(pprint.pformat(args))
-        logging.info(config)
-        logging.info("=> using {} GPUs".format(args.num_gpus))
-
-        output_config_path = os.path.join(final_output_dir, 'config.yaml')
-        logging.info("=> saving config into: {}".format(output_config_path))
-        save_config(config, output_config_path)
-    """
-
-    model = build_model(config)
+    # start config
+    root = 'configs'
+    if args.model in ['swinv2', 'convnextv2', 'cvt']:
+        config_path = os.path.join(root, args.model, args.config)
+        with open('config.yaml', 'r') as file:
+            cfg = CN(yaml.safe_load(file))
+    else:
+        raise Exception('model does not exist, try any of \n swinv2, convnextv2, cvt')
+    
+    # build model 
+    logging.info('=> building model')
+    if args.mode == 'train':
+        model = build_model(cfg)
+    else:
+        raise Exception('only train mode suppported, check the ipynbs for testing')
     model.to(torch.device('cuda'))
 
-    # copy model file
-    summary_model_on_master(model, config, final_output_dir, True)
+    # initialize optimizer
+    # different for each model
+    logging.info('=> building optimzer')
+    optimizer = build_optimizer(cfg.model.name, model)
 
-    if config.AMP.ENABLED and config.AMP.MEMORY_FORMAT == 'nhwc':
-        logging.info('=> convert memory format to nhwc')
-        model.to(memory_format=torch.channels_last)
+    # initialize scheduler
+    logging.info('=> building scheduler')
+    begin_epoch = cfg.train.begin_epoch
+    scheduler = build_scheduler(cfg.model.name, cfg, optimizer, begin_epoch)
 
-    writer_dict = {
-        'writer': SummaryWriter(logdir=tb_log_dir),
-        'train_global_steps': 0,
-        'valid_global_steps': 0,
-    }
-
-    best_perf = 0.0
-    best_model = True
-    begin_epoch = config.TRAIN.BEGIN_EPOCH
-    optimizer = build_optimizer(config, model)
-
-    best_perf, begin_epoch = resume_checkpoint(
-        model, optimizer, config, final_output_dir, True
-    )
-
-    train_loader = build_dataloader(config, True, args.distributed)
-    valid_loader = build_dataloader(config, False, args.distributed)
-
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(
-            model, device_ids=[args.local_rank],
-            output_device=args.local_rank,
-            find_unused_parameters=True
-        )
-
-    criterion = build_criterion(config)
+    # define loss
+    logging.info('=> building criterion')
+    criterion = build_criterion(cfg, is_train=True)
     criterion.cuda()
-    criterion_eval = build_criterion(config, train=False)
+    criterion_eval = build_criterion(cfg, is_train=False)
     criterion_eval.cuda()
 
-    lr_scheduler = build_lr_scheduler(config, optimizer, begin_epoch)
+    # add data augmentations
+    logging.info('=> use timm loader for training')
+    train_loader = build_dataloader(cfg.model.name, cfg, True)
+    valid_loader = build_dataloader(cfg.model.name, cfg, False)
 
-    scaler = torch.cuda.amp.GradScaler(enabled=config.AMP.ENABLED)
+   
+    # begin epoch = cfg.train.begin_epoch already defined above
+    # TODO: add resuming checkpoint
+    """
+    best_perf, begin_epoch = resume_checkpoint(
+        model, optimizer, cfg, final_output_dir, True
+    )
+    """
+    checkpoint_dir = os.path.join('checkpoints', cfg.model.name, cfg.train.save_dir)
+    scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
 
     logging.info('=> start training')
-    for epoch in range(begin_epoch, config.TRAIN.END_EPOCH):
+    for epoch in range(begin_epoch, begin_epoch+cfg.train.epoch):
         head = 'Epoch[{}]:'.format(epoch)
         logging.info('=> {} epoch start'.format(head))
 
@@ -129,51 +142,27 @@ def main():
             .format(head, time.time()-val_start)
         )
 
+        # TODO: modify scheduler
         lr_scheduler.step(epoch=epoch+1)
-        if config.TRAIN.LR_SCHEDULER.METHOD == 'timm':
+        if cfg.TRAIN.LR_SCHEDULER.METHOD == 'timm':
             lr = lr_scheduler.get_epoch_values(epoch+1)[0]
         else:
             lr = lr_scheduler.get_last_lr()[0]
         logging.info(f'=> lr: {lr}')
 
-        save_checkpoint_on_master(
-            model=model,
-            distributed=args.distributed,
-            model_name=config.MODEL.NAME,
-            optimizer=optimizer,
-            output_dir=final_output_dir,
-            in_epoch=True,
-            epoch_or_step=epoch,
-            best_perf=best_perf,
-        )
-
-        if best_model and comm.is_main_process():
-            save_model_on_master(
-                model, args.distributed, final_output_dir, 'model_best.pth'
+        # TODO: save model
+        if best_model:
+            save_model(
+                model, args.distributed, checkpoint_dir, 'model_best.pth'
             )
-
-        if config.TRAIN.SAVE_ALL_MODELS and comm.is_main_process():
-            save_model_on_master(
-                model, args.distributed, final_output_dir, f'model_{epoch}.pth'
-            )
+        if config.train.save_epoch_models:
+            save_model()
 
         logging.info(
             '=> {} epoch end, duration : {:.2f}s'
             .format(head, time.time()-start)
         )
-
-    save_model_on_master(
-        model, args.distributed, final_output_dir, 'final_state.pth'
-    )
-
-    if config.SWA.ENABLED and comm.is_main_process():
-        save_model_on_master(
-             args.distributed, final_output_dir, 'swa_state.pth'
-        )
-
-    writer_dict['writer'].close()
     logging.info('=> finish training')
-
 
 if __name__ == '__main__':
     main()
