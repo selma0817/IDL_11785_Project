@@ -26,9 +26,9 @@ def build_imagenet_val_dataset(input_size):
 
     return dataset, nb_classes
 
-def build_imagenet100_dataset(transforms=None):
+def build_imagenet100_dataset(transforms=None, input_size=224):
     if transforms==None:
-        transforms = build_transform(224)
+        transforms = build_transform(input_size)
     root = 'data/imagenet'
 
     print("Transform = ")
@@ -159,14 +159,14 @@ def build_dataloader_cvt(cfg, is_train=True):
         batch_size = cfg.test.batch_size
         shuffle = False
     
-    transforms = build_dataloader_cvt(cfg)
-    dataset = build_imagenet100_dataset(transforms=transforms)
+    transforms = build_transforms_cvt(cfg)
+    dataset = build_imagenet100_dataset(transforms=transforms, input_size=cfg.train.image_size[0])
 
     if cfg.aug.timm_aug.use_loader and is_train:
         timm_cfg = cfg.aug.timm_aug
         data_loader = create_loader(
             dataset,
-            input_size=cfg.train.image_size[0],
+            input_size=[3, 224, 224], #TODO, edit later
             batch_size=cfg.train.batch_size,
             is_training=True,
             use_prefetcher=True,
@@ -190,7 +190,6 @@ def build_dataloader_cvt(cfg, is_train=True):
             collate_fn=None,
             pin_memory=True,
             use_multi_epochs_loader=True,
-            shuffle=shuffle
         )
     else:
         data_loader = torch.utils.data.DataLoader(

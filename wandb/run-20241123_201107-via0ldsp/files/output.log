@@ -1,0 +1,8 @@
+2024-11-23 20:11:08,140 - root - INFO - => Epoch[0]: epoch start
+Traceback (most recent call last):
+  File "/home/ray/proj/IDL_11785_Project/train.py", line 206, in <module>
+    main()
+  File "/home/ray/proj/IDL_11785_Project/train.py", line 122, in main
+    if args.distributed:
+       ^^^^^^^^^^^^^^^^
+AttributeError: 'Namespace' object has no attribute 'distributed'

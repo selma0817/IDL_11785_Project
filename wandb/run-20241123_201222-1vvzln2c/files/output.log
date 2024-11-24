@@ -1,0 +1,50 @@
+2024-11-23 20:12:22,582 - root - INFO - => Epoch[0]: epoch start
+2024-11-23 20:12:22,582 - root - INFO - => Epoch[0]: train start
+Val:   0%|                                                                                                                                | 0/195 [00:00<?, ?it/s]2024-11-23 20:12:22,583 - root - INFO - => switch to train mode
+Traceback (most recent call last):
+  File "/home/ray/proj/IDL_11785_Project/train.py", line 204, in <module>
+    main()
+  File "/home/ray/proj/IDL_11785_Project/train.py", line 126, in main
+    top1_train, top5_train, loss_train = trainer(cfg, train_loader, model, criterion, optimizer,
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ray/proj/IDL_11785_Project/trainers.py", line 61, in train_one_epoch_cvt
+    for i, (x, y) in enumerate(train_loader):
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/timm/data/loader.py", line 127, in __iter__
+    for next_input, next_target in self.loader:
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/timm/data/loader.py", line 387, in __iter__
+    yield next(self.iterator)
+          ^^^^^^^^^^^^^^^^^^^
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 701, in __next__
+    data = self._next_data()
+           ^^^^^^^^^^^^^^^^^
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1465, in _next_data
+    return self._process_data(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1491, in _process_data
+    data.reraise()
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/torch/_utils.py", line 715, in reraise
+    raise exception
+TypeError: Caught TypeError in DataLoader worker process 0.
+Original Traceback (most recent call last):
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/torch/utils/data/_utils/worker.py", line 351, in _worker_loop
+    data = fetcher.fetch(index)  # type: ignore[possibly-undefined]
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py", line 52, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+            ~~~~~~~~~~~~^^^^^
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/torchvision/datasets/folder.py", line 247, in __getitem__
+    sample = self.transform(sample)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/torchvision/transforms/transforms.py", line 95, in __call__
+    img = t(img)
+          ^^^^^^
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/timm/data/transforms.py", line 253, in __call__
+    i, j, h, w = self.get_params(img, self.scale, self.ratio)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/timm/data/transforms.py", line 219, in get_params
+    target_area = random.uniform(*scale) * area
+                  ^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Random.uniform() takes 3 positional arguments but 12 were given

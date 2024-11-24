@@ -55,7 +55,7 @@ def train_one_epoch_cvt(config, train_loader, model, criterion, optimizer, epoch
         cutmix_minmax=None, # changed
         prob=aug.mixup_prob, switch_prob=aug.mixup_switch_prob,
         mode=aug.mixup_mode, label_smoothing=config.loss.label_smoothing,
-        num_classes=config.model.num_classes
+        num_classes=config.num_classes
     ) if aug.mixup_prob > 0.0 else None
     end = time.time()
     for i, (x, y) in enumerate(train_loader):

@@ -1,0 +1,16 @@
+{"time":"2024-11-23T20:10:33.436760545-05:00","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2024-11-23T20:10:33.436783228-05:00","level":"INFO","msg":"created symlink","path":"/home/ray/proj/IDL_11785_Project/wandb/run-20241123_201033-idbj1okv/logs/debug-core.log"}
+{"time":"2024-11-23T20:10:33.545906847-05:00","level":"INFO","msg":"created new stream","id":"idbj1okv"}
+{"time":"2024-11-23T20:10:33.545948486-05:00","level":"INFO","msg":"stream: started","id":"idbj1okv"}
+{"time":"2024-11-23T20:10:33.545998612-05:00","level":"INFO","msg":"writer: Do: started","stream_id":"idbj1okv"}
+{"time":"2024-11-23T20:10:33.54601898-05:00","level":"INFO","msg":"handler: started","stream_id":"idbj1okv"}
+{"time":"2024-11-23T20:10:33.546063706-05:00","level":"INFO","msg":"sender: started","stream_id":"idbj1okv"}
+{"time":"2024-11-23T20:10:33.770793627-05:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-11-23T20:10:33.88862663-05:00","level":"INFO","msg":"stream: closing","id":"idbj1okv"}
+{"time":"2024-11-23T20:10:33.888671396-05:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-11-23T20:10:33.889156429-05:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-11-23T20:10:35.034624158-05:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-11-23T20:10:35.129225923-05:00","level":"INFO","msg":"handler: closed","stream_id":"idbj1okv"}
+{"time":"2024-11-23T20:10:35.129273453-05:00","level":"INFO","msg":"writer: Close: closed","stream_id":"idbj1okv"}
+{"time":"2024-11-23T20:10:35.129301707-05:00","level":"INFO","msg":"sender: closed","stream_id":"idbj1okv"}
+{"time":"2024-11-23T20:10:35.129343096-05:00","level":"INFO","msg":"stream: closed","id":"idbj1okv"}

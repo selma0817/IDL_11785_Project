@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/home/ray/proj/IDL_11785_Project/train.py", line 206, in <module>
+    main()
+  File "/home/ray/proj/IDL_11785_Project/train.py", line 117, in main
+    for epoch in range(begin_epoch, begin_epoch+cfg.train.epoch):
+                                                ^^^^^^^^^^^^^^^
+  File "/home/ray/miniconda3/envs/IDLSG2/lib/python3.11/site-packages/yacs/config.py", line 141, in __getattr__
+    raise AttributeError(name)
+AttributeError: epoch

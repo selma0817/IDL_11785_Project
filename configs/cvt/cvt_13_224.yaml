@@ -1,7 +1,9 @@
 print_freq: 1
+verbose: False
 num_classes: 100
 model : 
-  name: 'swinv2_tiny_patch_window8_256'
+  name: 'cvt'
+  architecture: 'cvt_13_224'
 loss:
   loss: 'softmax'
   label_smoothing: 0.1
@@ -12,6 +14,9 @@ train:
   begin_epoch: 0
   epochs: 300
   optimizer: 'adamW'
+  optimizer_args:
+    lr: 0.001
+  lr: 0.001
   weight_decay: 0.05
   without_weight_decay_list: ['bn', 'bias', 'ln']
   clip_grad_norm: 0.0
@@ -40,6 +45,7 @@ aug:
   mixup_mode: 'batch'
   mixup: 0.8
   mixcut: 1.0
+  interpolation: 2
   timm_aug:
     use_loader: True
     re_count: 1

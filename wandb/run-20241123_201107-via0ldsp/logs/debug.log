@@ -1,0 +1,27 @@
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_setup.py:_flush():79] Current SDK version is 0.18.7
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_setup.py:_flush():79] Configure stats pid to 2386936
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_setup.py:_flush():79] Loading settings from /home/ray/.config/wandb/settings
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_setup.py:_flush():79] Loading settings from /home/ray/proj/IDL_11785_Project/wandb/settings
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_setup.py:_flush():79] Loading settings from environment variables: {}
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_setup.py:_flush():79] Inferring run settings from compute environment: {'program_relpath': 'train.py', 'program_abspath': '/home/ray/proj/IDL_11785_Project/train.py', 'program': '/home/ray/proj/IDL_11785_Project/train.py'}
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_setup.py:_flush():79] Applying login settings: {'api_key': '***REDACTED***'}
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_setup.py:_flush():79] Applying login settings: {'api_key': '***REDACTED***'}
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_setup.py:_flush():79] Applying login settings: {}
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_init.py:_log_setup():533] Logging user logs to /home/ray/proj/IDL_11785_Project/wandb/run-20241123_201107-via0ldsp/logs/debug.log
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_init.py:_log_setup():534] Logging internal logs to /home/ray/proj/IDL_11785_Project/wandb/run-20241123_201107-via0ldsp/logs/debug-internal.log
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_init.py:init():619] calling init triggers
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_init.py:init():626] wandb.init called with sweep_config: {}
+config: {'print_freq': 1, 'verbose': False, 'num_classes': 100, 'model': CfgNode({'name': 'cvt', 'architecture': 'cvt_13_224'}), 'loss': CfgNode({'loss': 'softmax', 'label_smoothing': 0.1}), 'amp': True, 'train': CfgNode({'image_size': [224, 224], 'batch_size': 256, 'begin_epoch': 0, 'epochs': 300, 'optimizer': 'adamW', 'optimizer_args': CfgNode({'lr': 0.001}), 'lr': 0.001, 'weight_decay': 0.05, 'without_weight_decay_list': ['bn', 'bias', 'ln'], 'clip_grad_norm': 0.0, 'shuffle': True, 'scheduler': CfgNode({'method': 'timm', 'args': CfgNode({'sched': 'cosine', 'warmup_epochs': 5, 'warmup_lr': 1e-06, 'min_lr': 1e-05, 'cooldown_epochs': 10, 'decay_rate': 0.1})}), 'save_dir': 'test1', 'save_epoch_models': True}), 'test': CfgNode({'batch_size': 32, 'image_size': [224, 224], 'interpolation': 3, 'center_crop': True}), 'aug': CfgNode({'scale': '(0.08, 1.0)', 'ratio': '(3.0/4.0, 4.0/3.0)', 'mixup_prob': 1.0, 'mixup_switch_prob': 0.5, 'mixup_mode': 'batch', 'mixup': 0.8, 'mixcut': 1.0, 'interpolation': 2, 'timm_aug': CfgNode({'use_loader': True, 're_count': 1, 're_mode': 'pixel', 're_split': False, 're_prob': 0.25, 'auto_augment': 'rand-m9-mstd0.5-inc1', 'hflip': 0.5, 'vflip': 0.0, 'color_jitter': 0.4, 'interpolation': 'bicubic'})}), 'input': CfgNode({'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225]})}
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_init.py:init():669] starting backend
+2024-11-23 20:11:07,765 INFO    MainThread:2386936 [wandb_init.py:init():673] sending inform_init request
+2024-11-23 20:11:07,766 INFO    MainThread:2386936 [backend.py:_multiprocessing_setup():104] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2024-11-23 20:11:07,766 INFO    MainThread:2386936 [wandb_init.py:init():686] backend started and connected
+2024-11-23 20:11:07,772 INFO    MainThread:2386936 [wandb_init.py:init():781] updated telemetry
+2024-11-23 20:11:07,777 INFO    MainThread:2386936 [wandb_init.py:init():814] communicating run to backend with 90.0 second timeout
+2024-11-23 20:11:08,061 INFO    MainThread:2386936 [wandb_init.py:init():867] starting run threads in backend
+2024-11-23 20:11:08,139 INFO    MainThread:2386936 [wandb_run.py:_console_start():2456] atexit reg
+2024-11-23 20:11:08,139 INFO    MainThread:2386936 [wandb_run.py:_redirect():2305] redirect: wrap_raw
+2024-11-23 20:11:08,139 INFO    MainThread:2386936 [wandb_run.py:_redirect():2370] Wrapping output streams.
+2024-11-23 20:11:08,139 INFO    MainThread:2386936 [wandb_run.py:_redirect():2395] Redirects installed.
+2024-11-23 20:11:08,140 INFO    MainThread:2386936 [wandb_init.py:init():911] run started, returning control to user process
+2024-11-23 20:11:08,184 WARNING MsgRouterThr:2386936 [router.py:message_loop():75] message_loop has been closed

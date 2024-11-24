@@ -43,7 +43,7 @@ def parse_args():
         '--model', help='options: swinv2, convnextv2, cvt', default='cvt'
     )
     parser.add_argument(
-        '--config', help='options', default='swinv2_tiny_patch_window8_256.yaml'
+        '--config', help='options', default='cvt_13_224.yaml'
     )
     args = parser.parse_args()
     return args
@@ -56,7 +56,7 @@ def main():
     root = 'configs'
     if args.model in ['swinv2', 'convnextv2', 'cvt']:
         config_path = os.path.join(root, args.model, args.config)
-        with open('config.yaml', 'r') as file:
+        with open(config_path, 'r') as file:
             cfg = CN(yaml.safe_load(file))
     else:
         raise Exception('model does not exist, try any of \n swinv2, convnextv2, cvt')
@@ -64,7 +64,7 @@ def main():
     # build model 
     logging.info('=> building model')
     if args.mode == 'train':
-        model = build_model(cfg)
+        model = build_model(cfg.model.architecture)
     else:
         raise Exception('only train mode suppported, check the ipynbs for testing')
     model.to(torch.device('cuda'))
@@ -72,7 +72,7 @@ def main():
     # initialize optimizer
     # different for each model
     logging.info('=> building optimzer')
-    optimizer = build_optimizer(cfg.model.name, model)
+    optimizer = build_optimizer(cfg.model.name, cfg, model)
 
     # initialize scheduler
     logging.info('=> building scheduler')
@@ -81,9 +81,9 @@ def main():
 
     # define loss
     logging.info('=> building criterion')
-    criterion = build_criterion(cfg, is_train=True)
+    criterion = build_criterion(cfg.model.name, cfg, is_train=True)
     criterion.cuda()
-    criterion_eval = build_criterion(cfg, is_train=False)
+    criterion_eval = build_criterion(cfg.model.name, cfg, is_train=False)
     criterion_eval.cuda()
 
     # add data augmentations
@@ -103,24 +103,22 @@ def main():
     scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
 
     logging.info('=> login to wandb')
-    wandb.login(key='ENTER key')
+    wandb.login(key='c8a7fb1f22a9fd377ab46b13a6a9a572f152b896')
     run = wandb.init(
-        name = cfg.model.name+"_"+cfg.save_dr, ## Wandb creates random run names if you skip this field
+        name = cfg.model.architecture+"_"+cfg.train.save_dir, ## Wandb creates random run names if you skip this field
         reinit = True, ### Allows reinitalizing runs when you re-run this cell
         # run_id = ### Insert specific run id here if you want to resume a previous run
         # resume = "must" ### You need this to resume previous runs, but comment out reinit = True when using this
-        project = "ENTER project", ### Project should be created in your wandb account
+        project = "IDLSG2_test1", ### Project should be created in your wandb account
         config = cfg ### Wandb Config for your run
     )
 
-    
-    for epoch in range(begin_epoch, begin_epoch+cfg.train.epoch):
+    end_epoch = begin_epoch+cfg.train.epochs
+    for epoch in range(begin_epoch, end_epoch):
         head = 'Epoch[{}]:'.format(epoch)
         logging.info('=> {} epoch start'.format(head))
 
         start = time.time()
-        if args.distributed:
-            train_loader.sampler.set_epoch(epoch)
 
         # train for one epoch
         logging.info('=> {} train start'.format(head))

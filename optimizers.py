@@ -22,7 +22,7 @@ def _is_depthwise(m):
 
 
 def set_wd(cfg, model):
-    without_decay_list = cfg.TRAIN.WITHOUT_WD_LIST
+    without_decay_list = cfg.train.without_weight_decay_list
     without_decay_depthwise = []
     without_decay_norm = []
     for m in model.modules():
@@ -79,7 +79,7 @@ def set_wd(cfg, model):
 
         for pp in without_decay_depthwise:
             if p is pp:
-                if cfg.VERBOSE:
+                if cfg.verbose:
                     print('=> set depthwise({}) wd to 0'.format(n))
                 without_decay.append(p)
                 ever_set = True
@@ -87,7 +87,7 @@ def set_wd(cfg, model):
 
         for pp in without_decay_norm:
             if p is pp:
-                if cfg.VERBOSE:
+                if cfg.verbose:
                     print('=> set norm({}) wd to 0'.format(n))
                 without_decay.append(p)
                 ever_set = True
@@ -98,7 +98,7 @@ def set_wd(cfg, model):
             and 'bias' in without_decay_list
             and n.endswith('.bias')
         ):
-            if cfg.VERBOSE:
+            if cfg.verbose:
                 print('=> set bias({}) wd to 0'.format(n))
             without_decay.append(p)
         elif not ever_set:
@@ -113,47 +113,47 @@ def set_wd(cfg, model):
 
 
 def build_optimizer_cvt(cfg, model):
-    if cfg.TRAIN.OPTIMIZER == 'timm':
-        args = cfg.TRAIN.OPTIMIZER_ARGS
+    if cfg.train.optimizer == 'timm':
+        args = cfg.train.optimizer_args
 
-        print(f'=> usage timm optimizer args: {cfg.TRAIN.OPTIMIZER_ARGS}')
+        print(f'=> usage timm optimizer args: {cfg.train.optimizer_args}')
         optimizer = create_optimizer(args, model)
 
         return optimizer
 
     optimizer = None
     params = set_wd(cfg, model)
-    if cfg.TRAIN.OPTIMIZER == 'sgd':
+    if cfg.train.optimizer == 'sgd':
         optimizer = optim.SGD(
             params,
             # filter(lambda p: p.requires_grad, model.parameters()),
-            lr=cfg.TRAIN.LR,
-            momentum=cfg.TRAIN.MOMENTUM,
-            weight_decay=cfg.TRAIN.WD,
-            nesterov=cfg.TRAIN.NESTEROV
+            lr=cfg.train.lr,
+            momentum=cfg.train.momentum,
+            weight_decay=cfg.train.weight_decay,
+            nesterov=cfg.train.nesterov
         )
-    elif cfg.TRAIN.OPTIMIZER == 'adam':
+    elif cfg.train.optimizer == 'adam':
         optimizer = optim.Adam(
             params,
             # filter(lambda p: p.requires_grad, model.parameters()),
-            lr=cfg.TRAIN.LR,
-            weight_decay=cfg.TRAIN.WD,
+            lr=cfg.train.lr,
+            weight_decay=cfg.train.weight_decay,
         )
-    elif cfg.TRAIN.OPTIMIZER == 'adamW':
+    elif cfg.train.optimizer == 'adamW':
         optimizer = optim.AdamW(
             params,
-            lr=cfg.TRAIN.LR,
-            weight_decay=cfg.TRAIN.WD,
+            lr=cfg.train.lr,
+            weight_decay=cfg.train.weight_decay,
         )
     elif cfg.TRAIN.OPTIMIZER == 'rmsprop':
         optimizer = optim.RMSprop(
             params,
             # filter(lambda p: p.requires_grad, model.parameters()),
-            lr=cfg.TRAIN.LR,
-            momentum=cfg.TRAIN.MOMENTUM,
-            weight_decay=cfg.TRAIN.WD,
-            alpha=cfg.TRAIN.RMSPROP_ALPHA,
-            centered=cfg.TRAIN.RMSPROP_CENTERED
+            lr=cfg.train.lr,
+            momentum=cfg.train.momentum,
+            weight_decay=cfg.train.weight_decay,
+            alpha=cfg.train.rmsprop_alpha,
+            centered=cfg.train.rmsprop_centered
         )
 
     return optimizer
