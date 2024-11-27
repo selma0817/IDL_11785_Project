@@ -42,5 +42,5 @@ def rename_folders(base_dir, train='train_data', val='val_data', class_json='ima
     print("Renaming complete.")
 
 if __name__ == '__main__':
-    base_dir = '/ix1/hkarim/yip33/kaggle_dataset/image_net100'
+    base_dir = '/home/ray/proj/IDL_11785_Project/data/imagenet100'
     rename_folders(base_dir)

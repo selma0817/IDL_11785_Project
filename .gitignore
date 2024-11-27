@@ -2,4 +2,6 @@ data/
 cocoapi/
 models/
 /CvT/ckpt
-wanda/
+wandb/
+.kaggle/
+checkpoints/

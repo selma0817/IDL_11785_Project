@@ -26,10 +26,10 @@ def build_imagenet_val_dataset(input_size):
 
     return dataset, nb_classes
 
-def build_imagenet100_dataset(transforms=None, input_size=224):
+def build_imagenet100_dataset(transforms=None, input_size=224, is_train=False):
     if transforms==None:
         transforms = build_transform(input_size)
-    root = 'data/imagenet'
+    root = 'data/imagenet100'
 
     print("Transform = ")
     if isinstance(transforms, tuple):
@@ -41,8 +41,12 @@ def build_imagenet100_dataset(transforms=None, input_size=224):
         for t in transforms.transforms:
             print(t)
     print("---------------------------")
-    print("reading from datapath", 'data/imagenet')
-    root = os.path.join(root, 'val')
+    print("reading from datapath", root)
+    if is_train:
+        root = os.path.join(root, 'train_data')
+    else:
+        root = os.path.join(root, 'val_data')
+    
     dataset = datasets.ImageFolder(root, transform=transforms)
 
     return dataset
@@ -151,7 +155,7 @@ def build_transforms_cvt(cfg, is_train=True):
 
         transforms = T.Compose(ts)
 
-def build_dataloader_cvt(cfg, is_train=True):
+def build_dataloader_cvt(cfg, is_train=False):
     if is_train:
         batch_size = cfg.train.batch_size
         shuffle = True
@@ -160,13 +164,14 @@ def build_dataloader_cvt(cfg, is_train=True):
         shuffle = False
     
     transforms = build_transforms_cvt(cfg)
-    dataset = build_imagenet100_dataset(transforms=transforms, input_size=cfg.train.image_size[0])
+    dataset = build_imagenet100_dataset(transforms=transforms, input_size=cfg.train.image_size[0], is_train=is_train)
 
     if cfg.aug.timm_aug.use_loader and is_train:
+        print('scale is', cfg.aug.scale, type(cfg.aug.scale))
         timm_cfg = cfg.aug.timm_aug
         data_loader = create_loader(
             dataset,
-            input_size=[3, 224, 224], #TODO, edit later
+            input_size=[3]+cfg.train.image_size, #TODO, edit later
             batch_size=cfg.train.batch_size,
             is_training=True,
             use_prefetcher=True,

@@ -1572,7 +1572,7 @@ class ConvolutionalVisionTransformer(nn.Module):
 
         return x
 
-def cvt_13_224():
+def cvt_13_224(num_classes=100):
     msvit_spec = {
         'INIT': 'trunc_norm',
         'NUM_STAGES': 3,
@@ -1598,7 +1598,7 @@ def cvt_13_224():
     }
     model = ConvolutionalVisionTransformer(
         in_chans=3,
-        num_classes=1000,
+        num_classes=num_classes,
         act_layer=QuickGELU,
         norm_layer=partial(LayerNorm, eps=1e-5),
         init=getattr(msvit_spec, 'INIT', 'trunc_norm'),
@@ -1616,7 +1616,7 @@ def pretrained_cvt_13_224():
     return model
 
 
-def cvt_21_224():
+def cvt_21_224(num_classes=100):
     msvit_spec = {
         'INIT': 'trunc_norm',
         'NUM_STAGES': 3,
@@ -1642,7 +1642,7 @@ def cvt_21_224():
     }
     model = ConvolutionalVisionTransformer(
         in_chans=3,
-        num_classes=1000,
+        num_classes=num_classes,
         act_layer=QuickGELU,
         norm_layer=partial(LayerNorm, eps=1e-5),
         init=getattr(msvit_spec, 'INIT', 'trunc_norm'),

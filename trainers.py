@@ -44,9 +44,9 @@ def train_one_epoch_cvt(config, train_loader, model, criterion, optimizer, epoch
     top5 = AverageMeter()
 
     # tqdm for displaying progress
-    batch_bar = tqdm(total=len(train_loader), dynamic_ncols=True, position=0, leave=False, desc='Val')
+    batch_bar = tqdm(total=len(train_loader), dynamic_ncols=True, position=0, leave=False, desc='Training')
 
-    logging.info('=> switch to train mode')
+    # logging.info('=> switch to train mode')
     model.train()
 
     aug = config.aug
@@ -59,6 +59,9 @@ def train_one_epoch_cvt(config, train_loader, model, criterion, optimizer, epoch
     ) if aug.mixup_prob > 0.0 else None
     end = time.time()
     for i, (x, y) in enumerate(train_loader):
+        # print(f"y shape: {y.shape}, dtype: {y.dtype}")
+        # print(f"y values: min={y.min()}, max={y.max()}")
+        # print(f"num_classes: {mixup_fn.num_classes}")
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -70,11 +73,12 @@ def train_one_epoch_cvt(config, train_loader, model, criterion, optimizer, epoch
             x, y = mixup_fn(x, y)
 
         with autocast('cuda', enabled=config.amp):
-            if config.amp:
-                x = x.contiguous(memory_format=torch.channels_last)
-                y = y.contiguous(memory_format=torch.channels_last)
+            # if config.amp:
+                # x = x.contiguous(memory_format=torch.channels_last)
+                # y = y.contiguous(memory_format=torch.channels_last)
 
             outputs = model(x)
+            # print(f"Model output size: {outputs.size()}")
             loss = criterion(outputs, y)
 
         # compute gradient and do update step
@@ -121,14 +125,18 @@ def train_one_epoch_cvt(config, train_loader, model, criterion, optimizer, epoch
                       batch_time=batch_time,
                       speed=x.size(0)/batch_time.val,
                       data_time=data_time, loss=losses, top1=top1, top5=top5)
-            logging.info(msg)
+            #logging.info(msg)
         
-        batch_bar.set_postfix(loss="{:.04f}".format(float(losses)), prec1="{:.04f}".format(float(top1)), prec5="{:.04f}".format(float(top5)))
+        batch_bar.set_postfix(
+            loss="{:.04f}".format(losses.avg), 
+            prec1="{:.04f}".format(top1.avg), 
+            prec5="{:.04f}".format(top5.avg)
+        )
         batch_bar.update()
 
         torch.cuda.synchronize()
 
-        return top1, top5, losses
+    return top1.avg, top5.avg, losses.avg
         
 
 
@@ -143,7 +151,7 @@ def test_cvt(config, val_loader, model, criterion):
     model.eval()
 
     # tqdm for displaying progress
-    batch_bar = tqdm(total=len(val_loader), dynamic_ncols=True, position=0, leave=False, desc='Val')
+    batch_bar = tqdm(total=len(val_loader), dynamic_ncols=True, position=0, leave=False, desc='Validating')
 
     end = time.time()
     for i, (x, y) in enumerate(val_loader):
@@ -165,7 +173,11 @@ def test_cvt(config, val_loader, model, criterion):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        batch_bar.set_postfix(loss="{:.04f}".format(float(losses)), prec1="{:.04f}".format(float(top1)), prec5="{:.04f}".format(float(float(top5))))
+        batch_bar.set_postfix(
+            loss="{:.04f}".format(losses.avg), 
+            prec1="{:.04f}".format(top1.avg), 
+            prec5="{:.04f}".format(top5.avg)
+        )
         batch_bar.update()
 
     top1_acc, top5_acc, loss_avg = map(
@@ -173,18 +185,20 @@ def test_cvt(config, val_loader, model, criterion):
         [top1, top5, losses]
     )
 
+    """
     msg = '=> TEST using Reassessed labels:\t' \
         'Accuracy@1 {top1:.3f}%\t' \
         'Accuracy@5 {top5:.3f}%\t'.format(
-            error1=top1,
-            error5=top5
+            error1=top1_acc,
+            error5=top5_acc
         )
     logging.info(msg)
 
+    """
     logging.info('=> switch to train mode')
     model.train()
 
-    return top1_acc, top1_acc, loss_avg
+    return top1_acc, top5_acc, loss_avg
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""

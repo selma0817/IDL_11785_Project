@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 import os
 import pprint
 import time
-from tqdm import tqdm
 import yaml
 from yacs.config import CfgNode as CN
 import wandb
@@ -44,6 +43,9 @@ def parse_args():
     )
     parser.add_argument(
         '--config', help='options', default='cvt_13_224.yaml'
+    )
+    parser.add_argument(
+        '--run_id', help='run id for wandb', default='IDLSG2_test1'
     )
     args = parser.parse_args()
     return args
@@ -94,6 +96,8 @@ def main():
    
     # begin epoch = cfg.train.begin_epoch already defined above
     # TODO: add resuming checkpoint
+    best_perf = 0.0
+    best_model = True
     """
     best_perf, begin_epoch = resume_checkpoint(
         model, optimizer, cfg, final_output_dir, True
@@ -109,29 +113,29 @@ def main():
         reinit = True, ### Allows reinitalizing runs when you re-run this cell
         # run_id = ### Insert specific run id here if you want to resume a previous run
         # resume = "must" ### You need this to resume previous runs, but comment out reinit = True when using this
-        project = "IDLSG2_test1", ### Project should be created in your wandb account
+        project = args.run_id, ### Project should be created in your wandb account
         config = cfg ### Wandb Config for your run
     )
 
     end_epoch = begin_epoch+cfg.train.epochs
     for epoch in range(begin_epoch, end_epoch):
         head = 'Epoch[{}]:'.format(epoch)
-        logging.info('=> {} epoch start'.format(head))
+        #logging.info('=> {} epoch start'.format(head))
 
         start = time.time()
 
         # train for one epoch
-        logging.info('=> {} train start'.format(head))
+        #logging.info('=> {} train start'.format(head))
         trainer = get_trainer(cfg.model.name)
         top1_train, top5_train, loss_train = trainer(cfg, train_loader, model, criterion, optimizer,
                             epoch, scaler=scaler)
-        logging.info(
-            '=> {} train end, duration: {:.2f}s'
-            .format(head, time.time()-start)
-        )
+        #logging.info(
+        #   '=> {} train end, duration: {:.2f}s'
+        #   .format(head, time.time()-start)
+        #)
 
         # evaluate on validation set
-        logging.info('=> {} validate start'.format(head))
+        # logging.info('=> {} validate start'.format(head))
         val_start = time.time()
 
         tester = get_tester(cfg.model.name)
@@ -147,20 +151,21 @@ def main():
         )
         scheduler.step(epoch=epoch+1)
         if cfg.train.scheduler.method == 'timm':
-            lr = scheduler.get_epoch_values(epoch+1)[0]
+            # lr = scheduler.get_epoch_values(epoch+1)[0]
+            lr = scheduler._get_lr(epoch+1)[0]
         else:
-            lr = scheduler.get_last_lr()[0]
+            lr = scheduler.get_lr()[0]
         logging.info(f'=> lr: {lr}')
 
         print("\tTrain Loss {:.04f}\t Learning Rate {:.07f}".format(loss_train, lr))
         print("\tVal Top1 {:.04f}%\tVal Top5 {:.04f}%\t Val Loss {:.04f}".format(top1_val, top5_val, loss_val))
 
         wandb.log({
-        'train_loss': loss_train,
-        'valid_top1': top1_val,
-        'valid_top5': top5_val,
-        'valid_loss': loss_val,
-        'lr'        : lr
+            'train_loss': loss_train,
+            'valid_top1': top1_val,
+            'valid_top5': top5_val,
+            'valid_loss': loss_val,
+            'lr'        : lr
         })
 
         # save model
