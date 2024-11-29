@@ -15,7 +15,7 @@ import torch
 from tqdm import tqdm
 
 from timm.data import Mixup
-from torch.amp import autocast
+# from torch.cuda.amp import autocast
 
 @torch.no_grad()
 def accuracy(output, target, topk=(1,)):
@@ -72,33 +72,29 @@ def train_one_epoch_cvt(config, train_loader, model, criterion, optimizer, epoch
         if mixup_fn:
             x, y = mixup_fn(x, y)
 
-        with autocast('cuda', enabled=config.amp):
-            # if config.amp:
-                # x = x.contiguous(memory_format=torch.channels_last)
-                # y = y.contiguous(memory_format=torch.channels_last)
 
-            outputs = model(x)
-            # print(f"Model output size: {outputs.size()}")
-            loss = criterion(outputs, y)
+        outputs = model(x)
+        # print(f"Model output size: {outputs.size()}")
+        loss = criterion(outputs, y)
 
         # compute gradient and do update step
         optimizer.zero_grad()
         is_second_order = hasattr(optimizer, 'is_second_order') \
             and optimizer.is_second_order
 
-        scaler.scale(loss).backward(create_graph=is_second_order)
+        loss.backward(create_graph=is_second_order)
 
         if config.train.clip_grad_norm > 0.0:
             # Unscales the gradients of optimizer's assigned params in-place
-            scaler.unscale_(optimizer)
+
 
             # Since the gradients of optimizer's assigned params are unscaled, clips as usual:
             torch.nn.utils.clip_grad_norm_(
                 model.parameters(), config.train.clip_grad_norm
             )
 
-        scaler.step(optimizer)
-        scaler.update()
+        optimizer.step()
+
         # measure accuracy and record loss
         losses.update(loss.item(), x.size(0))
 
@@ -226,12 +222,12 @@ class AverageMeter(object):
 ########################################################################################
 ########################################################################################
 def get_trainer(model_name='cvt'):
-    if model_name=='cvt':
+    if model_name in ['cvt', 'dcvt']:
         return train_one_epoch_cvt
     else:
         raise Exception('only cvt is supported')
 def get_tester(model_name='cvt'):
-    if model_name=='cvt':
+    if model_name in ['cvt', 'dcvt']:
         return test_cvt
     else:
         raise Exception('only cvt is supported')

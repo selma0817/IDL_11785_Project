@@ -56,7 +56,7 @@ def main():
 
     # start config
     root = 'configs'
-    if args.model in ['swinv2', 'convnextv2', 'cvt']:
+    if args.model in ['swinv2', 'convnextv2', 'cvt', 'dcvt']:
         config_path = os.path.join(root, args.model, args.config)
         with open(config_path, 'r') as file:
             cfg = CN(yaml.safe_load(file))
@@ -104,7 +104,9 @@ def main():
     )
     """
     checkpoint_dir = os.path.join('checkpoints', cfg.model.name, cfg.train.save_dir)
-    scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
+    if not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+    # scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
 
     logging.info('=> login to wandb')
     wandb.login(key='c8a7fb1f22a9fd377ab46b13a6a9a572f152b896')
@@ -128,7 +130,7 @@ def main():
         #logging.info('=> {} train start'.format(head))
         trainer = get_trainer(cfg.model.name)
         top1_train, top5_train, loss_train = trainer(cfg, train_loader, model, criterion, optimizer,
-                            epoch, scaler=scaler)
+                            epoch, scaler=None)
         #logging.info(
         #   '=> {} train end, duration: {:.2f}s'
         #   .format(head, time.time()-start)
