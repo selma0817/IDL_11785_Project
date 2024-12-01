@@ -551,7 +551,10 @@ class DAttentionBaseline(nn.Module):
                     mode='bilinear', align_corners=True) # B * g, h_g, HW, Ns
 
                 attn_bias = attn_bias.reshape(B * self.n_heads, H * W, n_sample)
-                attn = attn + attn_bias
+                if not self.with_cls_token:
+                    attn = attn + attn_bias
+                else:
+                    attn[:, 1:, 1:] = attn[:, 1:, 1:] + attn_bias
 
         attn = F.softmax(attn, dim=2)
         attn = self.attn_drop(attn)
@@ -922,7 +925,7 @@ def dcvt_13_224(num_classes=100):
         'PATCH_STRIDE': [4, 2, 2],
         'PATCH_PADDING': [2, 1, 1],
         'DIM_EMBED': [64, 192, 384],
-        'NUM_HEADS': [1, 3, 6],
+        'NUM_HEADS': [2, 4, 8],
         'DEPTH': [1, 2, 10],
         'MLP_RATIO': [4.0, 4.0, 4.0],
         'ATTN_DROP_RATE': [0.0, 0.0, 0.0],
@@ -940,7 +943,6 @@ def dcvt_13_224(num_classes=100):
         'offset_range_factor':[-1, -1, -1],
         'groups':[2, 4, 8],
         "ksizes" :[7, 5, 3],
-        "with_cls_token": False,
         "strides": [4, 2, 1]
     }
     model = ConvolutionalVisionTransformer(
