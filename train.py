@@ -39,10 +39,10 @@ def parse_args():
         '--mode', help='train or test', default='train'
     )
     parser.add_argument(
-        '--model', help='options: swinv2, convnextv2, cvt', default='cvt'
+        '--model', help='options: swinv2, convnextv2, cvt, dcvt, rcvt', default='cvt'
     )
     parser.add_argument(
-        '--config', help='options', default='yiyan_cvt_13_224.yaml'
+        '--config', help='options', default='rcvt_13_224.yaml'
     )
     parser.add_argument(
         '--run_id', help='run id for wandb', default='IDLSG2_yiyan'
@@ -56,12 +56,12 @@ def main():
 
     # start config
     root = 'configs'
-    if args.model in ['swinv2', 'convnextv2', 'cvt', 'dcvt']:
+    if args.model in ['swinv2', 'convnextv2', 'cvt', 'dcvt', 'rcvt']:
         config_path = os.path.join(root, args.model, args.config)
         with open(config_path, 'r') as file:
             cfg = CN(yaml.safe_load(file))
     else:
-        raise Exception('model does not exist, try any of \n swinv2, convnextv2, cvt')
+        raise Exception('model does not exist, try any of \n swinv2, convnextv2, cvt, dcvt, rcvt')
     
     # build model 
     logging.info('=> building model')

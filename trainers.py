@@ -222,12 +222,12 @@ class AverageMeter(object):
 ########################################################################################
 ########################################################################################
 def get_trainer(model_name='cvt'):
-    if model_name in ['cvt', 'dcvt']:
+    if model_name in ['cvt', 'dcvt', 'rcvt']:
         return train_one_epoch_cvt
     else:
-        raise Exception('only cvt is supported')
+        raise Exception('only cvt, dcvt, rcvt are supported')
 def get_tester(model_name='cvt'):
-    if model_name in ['cvt', 'dcvt']:
+    if model_name in ['cvt', 'dcvt', 'rcvt']:
         return test_cvt
     else:
-        raise Exception('only cvt is supported')
+        raise Exception('only cvt, dcvt, rcvt are supported')

@@ -166,7 +166,7 @@ def build_optimizer_cvt(cfg, model):
 ########################################################################################
 ########################################################################################
 def build_optimizer(model_name, cfg, model):
-    if model_name in ['cvt', 'dcvt']:
+    if model_name in ['cvt', 'dcvt', 'rcvt']:
         return build_optimizer_cvt(cfg, model)
     else:
-        raise Exception('only cvt is supported')
+        raise Exception('only cvt, dcvt, rcvt are supported')

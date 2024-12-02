@@ -65,7 +65,7 @@ def build_criterion_cvt(cfg, is_train=True):
 ########################################################################################
 ########################################################################################
 def build_criterion(model_name, cfg, is_train=True):
-    if model_name in ['cvt', 'dcvt']:
+    if model_name in ['cvt', 'dcvt', 'rcvt']:
         return build_criterion_cvt(cfg, is_train)
     else:
-        raise Exception('only cvt is supported')
+        raise Exception('only cvt, dcvt, rcvt are supported')
