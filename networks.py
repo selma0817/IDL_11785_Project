@@ -985,6 +985,8 @@ from timm.layers import DropPath, trunc_normal_
 import os
 
 
+from rotary_embedding_torch import RotaryEmbedding
+
 # From PyTorch internals
 def _ntuple(n):
     def parse(x):

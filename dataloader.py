@@ -29,8 +29,8 @@ def build_imagenet_val_dataset(input_size):
 def build_imagenet100_dataset(transforms=None, input_size=224, is_train=False):
     if transforms==None:
         transforms = build_transform(input_size)
-    root = 'data/imagenet100'
-
+    #root = 'data/imagenet100' # change  data/imagenet100
+    root = "/ix1/hkarim/yip33/kaggle_dataset/image_net100"
     print("Transform = ")
     if isinstance(transforms, tuple):
         for trans in transforms:

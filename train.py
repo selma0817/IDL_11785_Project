@@ -42,10 +42,10 @@ def parse_args():
         '--model', help='options: swinv2, convnextv2, cvt', default='cvt'
     )
     parser.add_argument(
-        '--config', help='options', default='cvt_13_224.yaml'
+        '--config', help='options', default='yiyan_cvt_13_224.yaml'
     )
     parser.add_argument(
-        '--run_id', help='run id for wandb', default='IDLSG2_test1'
+        '--run_id', help='run id for wandb', default='IDLSG2_yiyan'
     )
     args = parser.parse_args()
     return args
@@ -103,11 +103,14 @@ def main():
         model, optimizer, cfg, final_output_dir, True
     )
     """
-    checkpoint_dir = os.path.join('checkpoints', cfg.model.name, cfg.train.save_dir)
+    checkpoint_dir = os.path.join('/ix1/hkarim/yip33/IDL_11785_project','checkpoints', cfg.model.name, cfg.train.save_dir)
+    logging.info(f'=> checkpoints dir: {checkpoint_dir}')
     scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
 
     logging.info('=> login to wandb')
-    wandb.login(key='c8a7fb1f22a9fd377ab46b13a6a9a572f152b896')
+    wandb.login(key='57c916d673703185e1b47000c74bd854db77bcf8')
+    # wandb.login()
+    # wandb.setup(api_key='57c916d673703185e1b47000c74bd854db77bcf8')
     run = wandb.init(
         name = cfg.model.architecture+"_"+cfg.train.save_dir, ## Wandb creates random run names if you skip this field
         reinit = True, ### Allows reinitalizing runs when you re-run this cell
