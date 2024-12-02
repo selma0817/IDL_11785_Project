@@ -5,3 +5,14 @@ models/
 wandb/
 .kaggle/
 checkpoints/
+
+
+
+wandb/
+wandb/debug-internal.log
+wandb/debug.log
+wandb/latest-run
+
+
+__pycache__/
+*.pyc
