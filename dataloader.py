@@ -218,7 +218,7 @@ def build_dataloader_cvt(cfg, is_train=False):
 ########################################################################################
 ########################################################################################
 def build_dataloader(model_name, cfg, is_train=True):
-    if model_name=='cvt':
+    if model_name in ['cvt', 'dcvt']:
         return build_dataloader_cvt(cfg, is_train)
     else:
         raise Exception('only cvt is supported')
