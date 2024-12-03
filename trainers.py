@@ -54,12 +54,12 @@ def train_one_epoch_cvt(config, train_loader, model, criterion, optimizer, epoch
     model.train()
 
     # Compute FLOPs and Params once per epoch
-    dummy_input = torch.randn((1, 3, *config.train.image_size)).cuda(non_blocking=True)
-    flops, params = profile(model, inputs=(dummy_input,), verbose=False)
-    logging.info(f'Epoch {epoch}: FLOPs: {flops / 1e9:.2f} GFLOPs, Params: {params / 1e6:.2f} M')
+    # dummy_input = torch.randn((1, 3, *config.train.image_size)).cuda(non_blocking=True)
+    # flops, params = profile(model, inputs=(dummy_input,), verbose=False)
+    # logging.info(f'Epoch {epoch}: FLOPs: {flops / 1e9:.2f} GFLOPs, Params: {params / 1e6:.2f} M')
     
-    # Log FLOPs and Params to WandB
-    wandb.log({"Epoch": epoch, "FLOPs (GFLOPs)": flops / 1e9, "Params (M)": params / 1e6})
+    # # Log FLOPs and Params to WandB
+    # wandb.log({"Epoch": epoch, "FLOPs (GFLOPs)": flops / 1e9, "Params (M)": params / 1e6})
 
 
     aug = config.aug
@@ -159,13 +159,13 @@ def test_cvt(config, val_loader, model, criterion):
     logging.info('=> switch to eval mode')
     model.eval()
 
-    # Compute FLOPs and Params once per validation phase
-    dummy_input = torch.randn((1, 3, *config.test.image_size)).cuda(non_blocking=True)
-    flops, params = profile(model, inputs=(dummy_input,), verbose=False)
-    logging.info(f'Validation FLOPs: {flops / 1e9:.2f} GFLOPs, Params: {params / 1e6:.2f} M')
+    # # Compute FLOPs and Params once per validation phase
+    # dummy_input = torch.randn((1, 3, *config.test.image_size)).cuda(non_blocking=True)
+    # flops, params = profile(model, inputs=(dummy_input,), verbose=False)
+    # logging.info(f'Validation FLOPs: {flops / 1e9:.2f} GFLOPs, Params: {params / 1e6:.2f} M')
     
-    # Log FLOPs and Params to WandB
-    wandb.log({"Validation FLOPs (GFLOPs)": flops / 1e9, "Validation Params (M)": params / 1e6})
+    # # Log FLOPs and Params to WandB
+    # wandb.log({"Validation FLOPs (GFLOPs)": flops / 1e9, "Validation Params (M)": params / 1e6})
 
 
     # tqdm for displaying progress

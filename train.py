@@ -21,7 +21,9 @@ import torch.nn.parallel
 import torch.optim
 from torch.utils.collect_env import get_pretty_env_info
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-from thop import profile 
+from datetime import datetime
+from fvcore.nn import FlopCountAnalysis
+
 
 print(device)
 
@@ -49,6 +51,9 @@ def parse_args():
     parser.add_argument(
         '--run_id', help='run id for wandb', default='IDLSG2_yiyan'
     )
+    parser.add_argument(
+        '--resume', help='path for checkpoint to resume', default=None
+    )
     args = parser.parse_args()
     return args
 
@@ -72,15 +77,6 @@ def main():
     else:
         raise Exception('only train mode suppported, check the ipynbs for testing')
     model.to(torch.device('cuda'))
-
-    # Compute FLOPs and Params
-    dummy_input = torch.randn((1, 3, *cfg.train.image_size)).cuda()
-    flops, params = profile(model, inputs=(dummy_input,), verbose=False)
-
-    logging.info(f"FLOPs: {flops / 1e9:.2f} G, Params: {params / 1e6:.2f} M")
-    
-    # Log FLOPs and Params to WandB
-    wandb.log({"FLOPs (G)": flops / 1e9, "Params (M)": params / 1e6})
 
 
 
@@ -116,26 +112,53 @@ def main():
         model, optimizer, cfg, final_output_dir, True
     )
     """
-
-    checkpoint_dir = os.path.join('/ix1/hkarim/yip33/IDL_11785_project','checkpoints', cfg.model.name, cfg.train.save_dir)
+    # create unique folder with datatime of job for each run so we don't overwrite prev checkpoints
+    curr_time = datetime.now().strftime("%Y%m%d-%H%M%S")
+    checkpoint_dir = os.path.join('/ix1/hkarim/yip33/IDL_11785_project','checkpoints', cfg.model.name, cfg.train.save_dir, curr_time)
     logging.info(f'=> checkpoints dir: {checkpoint_dir}')
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
     scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
 
 #     checkpoint_dir = os.path.join('checkpoints', cfg.model.name, cfg.train.save_dir)
 #     if not os.path.exists(checkpoint_dir):
 #         os.makedirs(checkpoint_dir)
 #     # scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
-# >>>>>>> c687af47a322eb98a97592bdcccbca3f67142fbd
+    
+    # logging flops
+    dummy_input = torch.randn((1, 3, 224, 224)).cuda(non_blocking=True)
+    flops = FlopCountAnalysis(model, dummy_input)
+    flops_total = flops.total()
+    flops_module_operator = flops.by_module_and_operator() 
+    logger.info(f"=>flops total '{flops_total}', flops_module_operator {flops_module_operator}")
 
+
+    ## handle resume in training
+    if args.resume:
+        if os.path.isfile(args.resume):
+            logging.info(f"=> Loading checkpoint '{args.resume}'")
+            checkpoint = torch.load(args.resume, map_location=device)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            best_perf = checkpoint.get('best_perf', 0.0)
+            logging.info(f"=> Loaded checkpoint '{args.resume}' (epoch {begin_epoch})")
+
+        else:
+            logging.error(f"=> No checkpoint found at '{args.resume}'")
+            raise FileNotFoundError(f"Checkpoint '{args.resume}' does not exist.")
+        
+
+    # wandb setup
     logging.info('=> login to wandb')
     wandb.login(key='57c916d673703185e1b47000c74bd854db77bcf8')
     # wandb.login()
     # wandb.setup(api_key='57c916d673703185e1b47000c74bd854db77bcf8')
     run = wandb.init(
         name = cfg.model.architecture+"_"+cfg.train.save_dir, ## Wandb creates random run names if you skip this field
-        reinit = True, ### Allows reinitalizing runs when you re-run this cell
-        # run_id = ### Insert specific run id here if you want to resume a previous run
-        # resume = "must" ### You need this to resume previous runs, but comment out reinit = True when using this
+        #reinit = True, ### Allows reinitalizing runs when you re-run this cell
+        id = "00g5anil", ### Insert specific run id here if you want to resume a previous run
+        resume = True, ### You need this to resume previous runs, but comment out reinit = True when using this
         project = args.run_id, ### Project should be created in your wandb account
         config = cfg ### Wandb Config for your run
     )
@@ -195,13 +218,14 @@ def main():
         if best_model:
             best_path = os.path.join(checkpoint_dir, 'model_best.pth')
             save_model(
-                model, optimizer, scheduler, best_path
+                model, optimizer, scheduler, best_path, epoch, best_perf,
             )
             wandb.save(best_path)
             
         if cfg.train.save_epoch_models:
             last_path = os.path.join(checkpoint_dir, 'model_last.pth')
-            save_model(model, optimizer, scheduler, last_path)
+            save_model(model, optimizer, scheduler, last_path, epoch, best_perf,
+            )
             wandb.save(last_path)
 
         logging.info(
@@ -210,11 +234,14 @@ def main():
         )
     logging.info('=> finish training')
 
-def save_model(model, optimizer, scheduler, path):
+def save_model(model, optimizer, scheduler, path, epoch, best_perf):
     torch.save(
         {'model_state_dict'         : model.state_dict(),
          'optimizer_state_dict'     : optimizer.state_dict(),
-         'scheduler_state_dict'     : scheduler.state_dict()},
+         'scheduler_state_dict'     : scheduler.state_dict(),
+         'epoch'                    : epoch,
+         'best_perf'                : best_perf,
+         },
          path
     )
 
@@ -225,8 +252,10 @@ def load_model(path, model, optimizer= None, scheduler= None):
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     if scheduler != None:
         scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-
+            # begin_epoch = checkpoint.get('epoch', cfg.train.begin_epoch)
+            # best_perf = checkpoint.get('best_perf', 0.0)
     return [model, optimizer, scheduler]
 
 if __name__ == '__main__':
+    
     main()
