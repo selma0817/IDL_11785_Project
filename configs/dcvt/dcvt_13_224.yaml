@@ -10,13 +10,13 @@ loss:
 amp: True
 train:
   image_size: [224, 224]
-  batch_size: 64
+  batch_size: 32
   begin_epoch: 0
   epochs: 300
   optimizer: 'adamW'
   optimizer_args:
-    lr: 0.0005
-  lr: 0.0005
+    lr: 0.0003
+  lr: 0.0003
   weight_decay: 0.05
   without_weight_decay_list: ['bn', 'bias', 'ln']
   clip_grad_norm: 0.0
@@ -24,8 +24,9 @@ train:
   scheduler: 
     method: 'timm'
     args:
+      epochs: 500
       sched: 'cosine'
-      warmup_epochs: 5
+      warmup_epochs: 10
       warmup_lr: 0.000001
       min_lr: 0.00001
       cooldown_epochs: 10

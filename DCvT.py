@@ -603,7 +603,7 @@ class Block(nn.Module):
         n_groups = kwargs['groups']
         stride = kwargs['stride']
         offset_range_factor = kwargs['offset_range_factor']
-        use_pe = True
+        use_pe = False
         dwc_pe = False
         no_off = False
         fixed_pe = False
@@ -924,7 +924,7 @@ def dcvt_13_224(num_classes=100):
         'PATCH_SIZE': [7, 3, 3],
         'PATCH_STRIDE': [4, 2, 2],
         'PATCH_PADDING': [2, 1, 1],
-        'DIM_EMBED': [64, 192, 384],
+        'DIM_EMBED': [64, 256, 512],
         'NUM_HEADS': [2, 4, 8],
         'DEPTH': [1, 2, 10],
         'MLP_RATIO': [4.0, 4.0, 4.0],
@@ -941,7 +941,7 @@ def dcvt_13_224(num_classes=100):
         'PADDING_Q': [1, 1, 1],
         'STRIDE_Q': [1, 1, 1],
         'offset_range_factor':[-1, -1, -1],
-        'groups':[2, 4, 8],
+        'groups':[1, 2, 4],
         "ksizes" :[7, 5, 3],
         "strides": [4, 2, 1]
     }
