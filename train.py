@@ -39,13 +39,13 @@ def parse_args():
         '--mode', help='train or test', default='train'
     )
     parser.add_argument(
-        '--model', help='options: swinv2, convnextv2, cvt, dcvt, rcvt', default='cvt'
+        '--model', help='options: swinv2, convnextv2, cvt, dcvt, rcvt', default='swinv2'
     )
     parser.add_argument(
-        '--config', help='options', default='rcvt_13_224.yaml'
+        '--config', help='options', default='swinv2_tiny_patch4_window8_256.yaml'
     )
     parser.add_argument(
-        '--run_id', help='run id for wandb', default='IDLSG2_yiyan'
+        '--run_id', help='run id for wandb', default='IDL_SG2_Ray'
     )
     args = parser.parse_args()
     return args
@@ -53,7 +53,6 @@ def parse_args():
 
 def main():
     args = parse_args()
-
     # start config
     root = 'configs'
     if args.model in ['swinv2', 'convnextv2', 'cvt', 'dcvt', 'rcvt']:
@@ -62,6 +61,19 @@ def main():
             cfg = CN(yaml.safe_load(file))
     else:
         raise Exception('model does not exist, try any of \n swinv2, convnextv2, cvt, dcvt, rcvt')
+    
+    """
+    linear_scaled_lr = cfg.train.base_lr * cfg.train.batch_size / 512.0
+    linear_scaled_warmup_lr = cfg.train.warmup_lr * cfg.train.batch_size / 512.0
+    linear_scaled_min_lr = cfg.train.min_lr * cfg.train.batch_size / 512.0
+
+    cfg.defrost()
+    cfg.train.base_lr = linear_scaled_lr
+    cfg.train.warmup_lr = linear_scaled_warmup_lr
+    cfg.train.min_lr = linear_scaled_min_lr
+    cfg.freeze()
+    """
+
     
     # build model 
     logging.info('=> building model')
@@ -76,11 +88,6 @@ def main():
     logging.info('=> building optimzer')
     optimizer = build_optimizer(cfg.model.name, cfg, model)
 
-    # initialize scheduler
-    logging.info('=> building scheduler')
-    begin_epoch = cfg.train.begin_epoch
-    scheduler = build_scheduler(cfg.model.name, cfg, optimizer, begin_epoch)
-
     # define loss
     logging.info('=> building criterion')
     criterion = build_criterion(cfg.model.name, cfg, is_train=True)
@@ -93,6 +100,11 @@ def main():
     train_loader = build_dataloader(cfg.model.name, cfg, True)
     valid_loader = build_dataloader(cfg.model.name, cfg, False)
 
+    # initialize scheduler
+    logging.info('=> building scheduler')
+    begin_epoch = cfg.train.begin_epoch
+    scheduler = build_scheduler(cfg.model.name, cfg, optimizer, begin_epoch, len(train_loader))
+
    
     # begin epoch = cfg.train.begin_epoch already defined above
     # TODO: add resuming checkpoint
@@ -104,18 +116,18 @@ def main():
     )
     """
 
-    checkpoint_dir = os.path.join('/ix1/hkarim/yip33/IDL_11785_project','checkpoints', cfg.model.name, cfg.train.save_dir)
+    checkpoint_dir = os.path.join('/home/ray/proj/IDL_11785_Project','checkpoints', cfg.model.name, cfg.train.save_dir)
     logging.info(f'=> checkpoints dir: {checkpoint_dir}')
-    scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
+    # scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
 
 #     checkpoint_dir = os.path.join('checkpoints', cfg.model.name, cfg.train.save_dir)
 #     if not os.path.exists(checkpoint_dir):
 #         os.makedirs(checkpoint_dir)
-#     # scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
+#     scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
 # >>>>>>> c687af47a322eb98a97592bdcccbca3f67142fbd
 
     logging.info('=> login to wandb')
-    wandb.login(key='57c916d673703185e1b47000c74bd854db77bcf8')
+    wandb.login(key='c8a7fb1f22a9fd377ab46b13a6a9a572f152b896')
     # wandb.login()
     # wandb.setup(api_key='57c916d673703185e1b47000c74bd854db77bcf8')
     run = wandb.init(
@@ -137,8 +149,7 @@ def main():
         # train for one epoch
         #logging.info('=> {} train start'.format(head))
         trainer = get_trainer(cfg.model.name)
-        top1_train, top5_train, loss_train = trainer(cfg, train_loader, model, criterion, optimizer,
-                            epoch, scaler=None)
+        top1_train, top5_train, loss_train = trainer(cfg, train_loader, model, criterion, optimizer, epoch, scheduler)
         #logging.info(
         #   '=> {} train end, duration: {:.2f}s'
         #   .format(head, time.time()-start)
@@ -159,12 +170,12 @@ def main():
             '=> {} validate end, duration: {:.2f}s'
             .format(head, time.time()-val_start)
         )
-        scheduler.step(epoch=epoch+1)
+        # scheduler.step(epoch=epoch+1)
         if cfg.train.scheduler.method == 'timm':
             # lr = scheduler.get_epoch_values(epoch+1)[0]
             lr = scheduler._get_lr(epoch+1)[0]
         else:
-            lr = scheduler.get_lr()[0]
+            lr = scheduler._get_lr(epoch+1)[0]
         logging.info(f'=> lr: {lr}')
 
         print("\tTrain Loss {:.04f}\t Learning Rate {:.07f}".format(loss_train, lr))

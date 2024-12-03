@@ -1,0 +1,57 @@
+print_freq: 1
+verbose: False
+num_classes: 100
+amp_enable: True
+amp: True
+model : 
+  name: 'swinv2'
+  architecture: 'swinv2_tiny_patch4_window8_256'
+  embed_dim: 96
+  depths: [2, 2, 6, 2]
+  num_heads: [3, 6, 12, 24]
+  window_size: 8
+  label_smoothing: 0.1
+train:
+  save_dir: 'test1'
+  image_size: [256, 256]
+  batch_size: 128
+  begin_epoch: 0
+  epochs: 300
+  accumulation_steps: 1
+  warmup_epochs: 0
+  base_lr: 0.001
+  min_lr: 0.00001
+  warmup_lr: 0.000001
+  weight_decay: 0.05
+  layer_decay: 1.0
+  clip_grad: 5.0
+  optimizer: 
+    name: 'adamW'
+    momentum: 0.9
+    eps: 0.00000001
+    betas: [0.9, 0.999]
+  scheduler:
+    name: 'cosine'
+    method: 'not timm'
+    decay_epochs: 30
+    decay_rate: 0.1
+    gamma: 0.1
+    multisteps: []
+    warmup_prefix: True
+  save_epoch_models: True
+aug:
+  mixup: 0.8
+  mixup_prob: 1.0
+  mixup_switch_prob: 0.5
+  mixup_mode: batch
+  cutmix: 1.0
+  cutmix_minmax: None
+  reprob: 0.25
+  remode: pixel
+  recount: 1
+  color_jitter: 0.4
+  auto_augment: rand-m9-mstd0.5-inc1
+test:
+  crop: true
+data:
+  interpolation: bicubic

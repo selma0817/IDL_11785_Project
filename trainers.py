@@ -1,3 +1,241 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+########################################################################################
+########################################################################################
+####################                                                ####################
+####################                   SwinV2                       ####################
+####################                                                ####################
+########################################################################################
+########################################################################################
+import numpy as np
+
+import torch
+import timm.utils
+from torch import inf
+
+
+def ampscaler_get_grad_norm(parameters, norm_type: float = 2.0) -> torch.Tensor:
+    if isinstance(parameters, torch.Tensor):
+        parameters = [parameters]
+    parameters = [p for p in parameters if p.grad is not None]
+    norm_type = float(norm_type)
+    if len(parameters) == 0:
+        return torch.tensor(0.)
+    device = parameters[0].grad.device
+    if norm_type == inf:
+        total_norm = max(p.grad.detach().abs().max().to(device) for p in parameters)
+    else:
+        total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(),
+                                                        norm_type).to(device) for p in parameters]), norm_type)
+    return total_norm
+
+class NativeScalerWithGradNormCount:
+    state_dict_key = "amp_scaler"
+
+    def __init__(self):
+        self._scaler = torch.amp.GradScaler()
+
+    def __call__(self, loss, optimizer, clip_grad=None, parameters=None, create_graph=False, update_grad=True):
+        self._scaler.scale(loss).backward(create_graph=create_graph)
+        if update_grad:
+            if clip_grad is not None:
+                assert parameters is not None
+                self._scaler.unscale_(optimizer)  # unscale the gradients of optimizer's assigned params in-place
+                norm = torch.nn.utils.clip_grad_norm_(parameters, clip_grad)
+            else:
+                self._scaler.unscale_(optimizer)
+                norm = ampscaler_get_grad_norm(parameters)
+            self._scaler.step(optimizer)
+            self._scaler.update()
+        else:
+            norm = None
+        return norm
+
+    def state_dict(self):
+        return self._scaler.state_dict()
+
+    def load_state_dict(self, state_dict):
+        self._scaler.load_state_dict(state_dict)
+
+def train_one_epoch_swinv2(config, data_loader, model, criterion, optimizer, epoch, lr_scheduler):
+    loss_scaler=NativeScalerWithGradNormCount()
+    mixup_fn = None
+    mixup_active = config.aug.mixup > 0 or config.aug.cutmix > 0.
+    if mixup_active:
+        mixup_fn = Mixup(
+            mixup_alpha=config.aug.mixup, cutmix_alpha=config.aug.cutmix, cutmix_minmax=None,
+            prob=config.aug.mixup_prob, switch_prob=config.aug.mixup_switch_prob, mode=config.aug.mixup_mode,
+            label_smoothing=config.model.label_smoothing, num_classes=config.num_classes)
+    model.train()
+    optimizer.zero_grad()
+
+    num_steps = len(data_loader)
+    loss_meter = AverageMeter()
+    acc1_meter = AverageMeter()
+    acc5_meter = AverageMeter()
+
+    start = time.time()
+    end = time.time()
+
+    batch_bar = tqdm(total=len(data_loader), dynamic_ncols=True, position=0, leave=False, desc='Training')
+    for idx, (samples, targets) in enumerate(data_loader):
+        samples = samples.cuda(non_blocking=True)
+        targets = targets.cuda(non_blocking=True)
+        original_targets = targets.clone()
+
+        if mixup_fn is not None:
+            samples, targets = mixup_fn(samples, targets)
+
+        """
+        with torch.amp.autocast('cuda', enabled=config.amp_enable):
+            outputs = model(samples)
+        loss = criterion(outputs, targets)
+        loss = loss / config.train.accumulation_steps
+        """
+        outputs = model(samples)
+        loss = criterion(outputs, targets)
+
+        # print('samples shape', samples.shape)
+        # print('targets shape', targets.shape)
+        # print('outputs shape', outputs.shape) 
+        
+        optimizer.zero_grad()
+        is_second_order = hasattr(optimizer, 'is_second_order') \
+            and optimizer.is_second_order
+        loss.backward(create_graph=is_second_order)
+        if config.train.clip_grad > 0.0:
+            # Unscales the gradients of optimizer's assigned params in-place
+
+
+            # Since the gradients of optimizer's assigned params are unscaled, clips as usual:
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(), config.train.clip_grad
+            )
+
+        optimizer.step()
+
+        """
+        # this attribute is added by timm on one optimizer (adahessian)
+        is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+        grad_norm = loss_scaler(loss, optimizer, clip_grad=config.train.clip_grad,
+                                parameters=model.parameters(), create_graph=is_second_order,
+                                update_grad=(idx + 1) % config.train.accumulation_steps == 0)
+        """
+        if (idx + 1) % config.train.accumulation_steps == 0:
+            optimizer.zero_grad()
+            lr_scheduler.step_update((epoch * num_steps + idx) // config.train.accumulation_steps)
+        
+        loss_scale_value = loss_scaler.state_dict()["scale"]
+
+        torch.cuda.synchronize()
+
+        acc1, acc5 = accuracy(outputs, original_targets, topk=(1, 5))
+        acc1_meter.update(acc1, original_targets.size(0))
+        acc5_meter.update(acc5, original_targets.size(0))  
+
+        loss_meter.update(loss.item(), targets.size(0))
+        end = time.time()
+
+
+        if idx % config.print_freq == 0:
+            lr = optimizer.param_groups[0]['lr']
+            wd = optimizer.param_groups[0]['weight_decay']
+
+        batch_bar.set_postfix(
+            loss="{:.04f}".format(loss_meter.avg), 
+            acc1="{:.04f}".format(acc1_meter.avg),
+            acc5="{:.04f}".format(acc5_meter.avg),
+            lr="{:.09f}".format(lr),
+            wd="{:.04f}".format(wd),
+        )
+        batch_bar.update()
+
+    
+    # lr_scheduler.step(epoch=epoch + 1)
+
+    return None, None, loss_meter.avg
+
+
+@torch.no_grad()
+def test_swinv2(config, data_loader, model, criterion):
+
+    batch_time = AverageMeter()
+    loss_meter = AverageMeter()
+    acc1_meter = AverageMeter()
+    acc5_meter = AverageMeter()
+
+    logging.info('=> switch to eval mode')
+    model.eval()
+
+    # tqdm for displaying progress
+    batch_bar = tqdm(total=len(data_loader), dynamic_ncols=True, position=0, leave=False, desc='Validating')
+
+    for idx, (images, target) in enumerate(data_loader):
+        criterion = torch.nn.CrossEntropyLoss()
+
+        images = images.cuda(non_blocking=True)
+        target = target.cuda(non_blocking=True)
+
+        # compute output
+        """
+        with torch.amp.autocast('cuda', enabled=config.amp_enable):
+            output = model(images)
+        """
+
+        output = model(images)
+        loss = criterion(output, target)
+
+        # measure accuracy and record loss
+        loss = criterion(output, target)
+        
+        acc1, acc5 = accuracy(output, target, topk=(1, 5))
+
+        # acc1 = reduce_tensor(acc1)
+        # acc5 = reduce_tensor(acc5)
+        # loss = reduce_tensor(loss)
+
+        loss_meter.update(loss.item(), target.size(0))
+        acc1_meter.update(acc1, target.size(0))
+        acc5_meter.update(acc5, target.size(0))
+
+        batch_bar.set_postfix(
+            loss="{:.04f}".format(loss_meter.avg), 
+            prec1="{:.04f}".format(acc1_meter.avg), 
+            prec5="{:.04f}".format(acc5_meter.avg)
+        )
+        batch_bar.update()
+        
+    top1_acc, top5_acc, loss_avg = map(
+        lambda x: x.avg,
+        [acc1_meter, acc5_meter, loss_meter]
+    )
+
+    logging.info('=> switch to train mode')
+    model.train()
+        
+    return acc1_meter.avg, acc5_meter.avg, loss_meter.avg
+
+
+@torch.no_grad()
+def throughput(data_loader, model, logger):
+    model.eval()
+
+    for idx, (images, _) in enumerate(data_loader):
+        images = images.cuda(non_blocking=True)
+        batch_size = images.shape[0]
+        for i in range(50):
+            model(images)
+        torch.cuda.synchronize()
+        logger.info(f"throughput averaged with 30 times")
+        tic1 = time.time()
+        for i in range(30):
+            model(images)
+        torch.cuda.synchronize()
+        tic2 = time.time()
+        logger.info(f"batch_size {batch_size} throughput {30 * batch_size / (tic2 - tic1)}")
+        return
+
 ########################################################################################
 ########################################################################################
 ####################                                                ####################
@@ -5,10 +243,6 @@
 ####################                                                ####################
 ########################################################################################
 ########################################################################################
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import logging
 import time
 import torch
@@ -26,6 +260,13 @@ def accuracy(output, target, topk=(1,)):
     maxk = max(topk)
     batch_size = target.size(0)
 
+    if target.ndim > 1:  # Check if target is one-hot encoded
+        target = target.argmax(dim=1)
+    
+    #print(target)
+    #print(output)
+    #predictions = output.argmax(dim=1)
+    #print(predictions)
     _, pred = output.topk(maxk, 1, True, True)
     pred = pred.t()
     correct = pred.eq(target.reshape(1, -1).expand_as(pred))
@@ -131,6 +372,7 @@ def train_one_epoch_cvt(config, train_loader, model, criterion, optimizer, epoch
         batch_bar.update()
 
         torch.cuda.synchronize()
+    
 
     return top1.avg, top5.avg, losses.avg
         
@@ -171,8 +413,8 @@ def test_cvt(config, val_loader, model, criterion):
 
         batch_bar.set_postfix(
             loss="{:.04f}".format(losses.avg), 
-            prec1="{:.04f}".format(top1.avg), 
-            prec5="{:.04f}".format(top5.avg)
+            top1="{:.04f}".format(top1.avg), 
+            top5="{:.04f}".format(top5.avg)
         )
         batch_bar.update()
 
@@ -224,10 +466,14 @@ class AverageMeter(object):
 def get_trainer(model_name='cvt'):
     if model_name in ['cvt', 'dcvt', 'rcvt']:
         return train_one_epoch_cvt
+    elif model_name == 'swinv2':
+        return train_one_epoch_swinv2
     else:
-        raise Exception('only cvt, dcvt, rcvt are supported')
+        raise Exception('only cvt, dcvt, rcvt, swinv2 are supported')
 def get_tester(model_name='cvt'):
     if model_name in ['cvt', 'dcvt', 'rcvt']:
         return test_cvt
+    elif model_name == 'swinv2':
+        return test_swinv2
     else:
-        raise Exception('only cvt, dcvt, rcvt are supported')
+        raise Exception('only cvt, dcvt, rcvt, swinv2 are supported')

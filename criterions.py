@@ -1,3 +1,21 @@
+########################################################################################
+########################################################################################
+####################                                                ####################
+####################                   SwinV2                       ####################
+####################                                                ####################
+########################################################################################
+########################################################################################
+import torch
+import timm.loss
+def build_criterion_swinv2(config):
+    if config.aug.mixup > 0.:
+        # smoothing is handled with mixup label transform
+        criterion = SoftTargetCrossEntropy()
+    elif config.model.label_smoothing> 0.:
+        criterion = LabelSmoothingCrossEntropy(smoothing=config.model.label_smoothing)
+    else:
+        criterion = torch.nn.CrossEntropyLoss()
+    return criterion
 
 ########################################################################################
 ########################################################################################
@@ -67,5 +85,7 @@ def build_criterion_cvt(cfg, is_train=True):
 def build_criterion(model_name, cfg, is_train=True):
     if model_name in ['cvt', 'dcvt', 'rcvt']:
         return build_criterion_cvt(cfg, is_train)
+    elif model_name == 'swinv2':
+        return build_criterion_swinv2(cfg)
     else:
-        raise Exception('only cvt, dcvt, rcvt are supported')
+        raise Exception('only cvt, dcvt, rcvt, swinv2 are supported')

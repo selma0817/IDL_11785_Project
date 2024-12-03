@@ -164,8 +164,8 @@ def convnextv2_nano(**kwargs):
     model = ConvNeXtV2(depths=[2, 2, 8, 2], dims=[80, 160, 320, 640], **kwargs)
     return model
 
-def convnextv2_tiny(**kwargs):
-    model = ConvNeXtV2(depths=[3, 3, 9, 3], dims=[96, 192, 384, 768], **kwargs)
+def convnextv2_tiny(num_classes=100, **kwargs):
+    model = ConvNeXtV2(depths=[3, 3, 9, 3], dims=[96, 192, 384, 768], num_classes=num_classes, **kwargs)
     return model
 
 def pretrained_convnextv2_tiny():

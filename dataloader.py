@@ -29,8 +29,8 @@ def build_imagenet_val_dataset(input_size):
 def build_imagenet100_dataset(transforms=None, input_size=224, is_train=False):
     if transforms==None:
         transforms = build_transform(input_size)
-    #root = 'data/imagenet100' # change  data/imagenet100
-    root = "/ix1/hkarim/yip33/kaggle_dataset/image_net100"
+    root = 'data/imagenet100' # change  data/imagenet100
+    #root = "/ix1/hkarim/yip33/kaggle_dataset/image_net100"
     print("Transform = ")
     if isinstance(transforms, tuple):
         for trans in transforms:
@@ -46,7 +46,7 @@ def build_imagenet100_dataset(transforms=None, input_size=224, is_train=False):
         root = os.path.join(root, 'train_data')
     else:
         root = os.path.join(root, 'val_data')
-    
+    print('building dataset', root)
     dataset = datasets.ImageFolder(root, transform=transforms)
 
     return dataset
@@ -77,6 +77,128 @@ def build_transform(input_size, crop_pct=None):
     t.append(transforms.ToTensor())
     t.append(transforms.Normalize(mean, std))
     return transforms.Compose(t)
+########################################################################################
+########################################################################################
+####################                                                ####################
+####################                   SwinV2                       ####################
+####################                                                ####################
+########################################################################################
+########################################################################################
+import os
+import torch
+import numpy as np
+import torch.distributed as dist
+from torchvision import datasets, transforms
+from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+from timm.data import Mixup
+from timm.data import create_transform
+try:
+    from torchvision.transforms import InterpolationMode
+
+    def _pil_interp(method):
+        if method == 'bicubic':
+            return InterpolationMode.BICUBIC
+        elif method == 'lanczos':
+            return InterpolationMode.LANCZOS
+        elif method == 'hamming':
+            return InterpolationMode.HAMMING
+        else:
+            # default bilinear, do we want to allow nearest?
+            return InterpolationMode.BILINEAR
+
+
+    import timm.data.transforms as timm_transforms
+
+    timm_transforms._pil_interp = _pil_interp
+except:
+    from timm.data.transforms import _pil_interp
+
+
+def build_dataloader_swinv2(config, is_train=True):
+    if is_train:
+        dataset = build_dataset_swinv2(is_train=is_train, config=config)
+        print(f"successfully build train dataset")
+    else:
+        dataset = build_dataset_swinv2(is_train=is_train, config=config)
+        print(f"successfully build val dataset")
+
+    if is_train:
+        data_loader = torch.utils.data.DataLoader(
+            dataset, 
+            batch_size=config.train.batch_size,
+            num_workers=6,
+            shuffle=True,
+            pin_memory=True,
+            drop_last=True,
+        )
+    else:
+        data_loader = torch.utils.data.DataLoader(
+            dataset,
+            batch_size=config.train.batch_size,
+            shuffle=False,
+            num_workers=6,
+            pin_memory=True,
+            drop_last=False
+        )
+
+    # setup mixup / cutmix
+    mixup_fn = None
+    mixup_active = config.aug.mixup > 0 or config.aug.cutmix > 0.
+    if mixup_active:
+        mixup_fn = Mixup(
+            mixup_alpha=config.aug.mixup, cutmix_alpha=config.aug.cutmix, cutmix_minmax=None,
+            prob=config.aug.mixup_prob, switch_prob=config.aug.mixup_switch_prob, mode=config.aug.mixup_mode,
+            label_smoothing=config.model.label_smoothing, num_classes=config.num_classes)
+    
+    return data_loader
+
+
+def build_dataset_swinv2(is_train, config):
+    transforms = build_transforms_swinv2(is_train, config)
+    dataset = build_imagenet100_dataset(transforms=transforms, input_size=config.train.image_size[0], is_train=is_train)
+
+    return dataset
+
+
+def build_transforms_swinv2(is_train, config):
+    resize_im = config.train.image_size[0] > 32
+    if is_train:
+        # this should always dispatch to transforms_imagenet_train
+        transform = create_transform(
+            input_size=config.train.image_size,
+            is_training=True,
+            color_jitter=config.aug.color_jitter if config.aug.color_jitter > 0 else None,
+            auto_augment=config.aug.auto_augment if config.aug.auto_augment != 'none' else None,
+            re_prob=config.aug.reprob,
+            re_mode=config.aug.remode,
+            re_count=config.aug.recount,
+            interpolation=config.data.interpolation,
+        )
+        if not resize_im:
+            # replace RandomResizedCropAndInterpolation with
+            # RandomCrop
+            transform.transforms[0] = transforms.RandomCrop(config.train.image_size, padding=4)
+        return transform
+
+    t = []
+    if resize_im:
+        if config.test.crop:
+            size = int((256 / 224) * config.train.image_size[0])
+            t.append(
+                transforms.Resize(size, interpolation=_pil_interp(config.data.interpolation)),
+                # to maintain same ratio w.r.t. 224 images
+            )
+            t.append(transforms.CenterCrop(config.train.image_size[0]))
+        else:
+            t.append(
+                transforms.Resize(config.train.image_size,
+                                  interpolation=_pil_interp(config.data.interpolation))
+            )
+
+    t.append(transforms.ToTensor())
+    t.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
+    return transforms.Compose(t)
+
 ########################################################################################
 ########################################################################################
 ####################                                                ####################
@@ -220,5 +342,7 @@ def build_dataloader_cvt(cfg, is_train=False):
 def build_dataloader(model_name, cfg, is_train=True):
     if model_name in ['cvt', 'dcvt', 'rcvt']:
         return build_dataloader_cvt(cfg, is_train)
+    elif model_name == 'swinv2':
+        return build_dataloader_swinv2(config=cfg, is_train=is_train)
     else:
-        raise Exception('only cvt, dcvt, rcvt are supported')
+        raise Exception('only cvt, dcvt, rcvt, swinv2 are supported')
