@@ -7,6 +7,7 @@ from timm.layers import trunc_normal_, DropPath
 from timm.layers import DropPath, to_2tuple, trunc_normal_
 import numpy as np
 from DCvT import dcvt_13_224
+from RCvT import rcvt_13_224
 ########################################################################################
 ########################################################################################
 ####################                                                ####################
@@ -1690,6 +1691,8 @@ def build_model(model_name='swinv2_tiny_patch4_window8_256'):
         return cvt_21_224()
     elif model_name == 'dcvt_13_224':
         return dcvt_13_224()
+    elif model_name == 'rcvt_13_224':
+        return rcvt_13_224()
     else:
         raise Exception('model does not exist, see configs for options')
 
