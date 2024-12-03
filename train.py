@@ -21,6 +21,8 @@ import torch.nn.parallel
 import torch.optim
 from torch.utils.collect_env import get_pretty_env_info
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+from thop import profile 
+
 print(device)
 
 from networks import build_model
@@ -70,6 +72,17 @@ def main():
     else:
         raise Exception('only train mode suppported, check the ipynbs for testing')
     model.to(torch.device('cuda'))
+
+    # Compute FLOPs and Params
+    dummy_input = torch.randn((1, 3, *cfg.train.image_size)).cuda()
+    flops, params = profile(model, inputs=(dummy_input,), verbose=False)
+
+    logging.info(f"FLOPs: {flops / 1e9:.2f} G, Params: {params / 1e6:.2f} M")
+    
+    # Log FLOPs and Params to WandB
+    wandb.log({"FLOPs (G)": flops / 1e9, "Params (M)": params / 1e6})
+
+
 
     # initialize optimizer
     # different for each model

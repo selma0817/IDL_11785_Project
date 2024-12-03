@@ -30,7 +30,7 @@ train:
       min_lr: 0.00001
       cooldown_epochs: 10
       decay_rate: 0.1
-  save_dir: 'test1'
+  save_dir: 'baseline'
   save_epoch_models: True
 test:
   batch_size: 32
