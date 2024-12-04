@@ -16,3 +16,5 @@ wandb/latest-run
 
 __pycache__/
 *.pyc
+
+run_logs/

@@ -2,21 +2,21 @@ print_freq: 1
 verbose: False
 num_classes: 100
 model : 
-  name: 'dcvt'
-  architecture: 'dcvt_13_224'
+  name: 'rcvt'
+  architecture: 'rcvt_13_224'
 loss:
   loss: 'softmax'
-  label_smoothing: 0.1
+  label_smoothing: 0.2
 amp: True
 train:
   image_size: [224, 224]
-  batch_size: 32
+  batch_size: 64
   begin_epoch: 0
   epochs: 300
   optimizer: 'adamW'
   optimizer_args:
-    lr: 0.0003
-  lr: 0.0003
+    lr: 0.00025
+  lr: 0.00025
   weight_decay: 0.05
   without_weight_decay_list: ['bn', 'bias', 'ln']
   clip_grad_norm: 0.0
@@ -24,14 +24,13 @@ train:
   scheduler: 
     method: 'timm'
     args:
-      epochs: 500
       sched: 'cosine'
-      warmup_epochs: 10
+      warmup_epochs: 5
       warmup_lr: 0.000001
       min_lr: 0.00001
       cooldown_epochs: 10
       decay_rate: 0.1
-  save_dir: 'baseline'
+  save_dir: 'baseline_flops'
   save_epoch_models: True
 test:
   batch_size: 32
