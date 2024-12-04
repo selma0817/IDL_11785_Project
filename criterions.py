@@ -1,6 +1,24 @@
 ########################################################################################
 ########################################################################################
 ####################                                                ####################
+####################                   ConNeXtV2                    ####################
+####################                                                ####################
+########################################################################################
+########################################################################################
+def build_criterion_convnextv2(config):
+    if config.train.aug.mixup > 0.:
+        # smoothing is handled with mixup label transform
+        criterion = SoftTargetCrossEntropy()
+    elif config.model.label_smoothing> 0.:
+        criterion = LabelSmoothingCrossEntropy(smoothing=config.model.label_smoothing)
+    else:
+        criterion = torch.nn.CrossEntropyLoss()
+    return criterion
+
+
+########################################################################################
+########################################################################################
+####################                                                ####################
 ####################                   SwinV2                       ####################
 ####################                                                ####################
 ########################################################################################
@@ -87,5 +105,7 @@ def build_criterion(model_name, cfg, is_train=True):
         return build_criterion_cvt(cfg, is_train)
     elif model_name == 'swinv2':
         return build_criterion_swinv2(cfg)
+    elif model_name == 'convnextv2':
+        return build_criterion_convnextv2(cfg)
     else:
-        raise Exception('only cvt, dcvt, rcvt, swinv2 are supported')
+        raise Exception('only cvt, dcvt, rcvt, swinv2, convnextv2 are supported')

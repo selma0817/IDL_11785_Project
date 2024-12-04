@@ -4,6 +4,158 @@ from __future__ import print_function
 ########################################################################################
 ########################################################################################
 ####################                                                ####################
+####################                   ConNeXtV2                    ####################
+####################                                                ####################
+########################################################################################
+########################################################################################
+ # Copyright (c) Meta Platforms, Inc. and affiliates.
+
+# All rights reserved.
+
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
+
+import torch
+from torch import optim as optim
+from timm.optim.lookahead import Lookahead
+
+
+
+def get_num_layer_for_convnext_single(var_name, depths):
+    """
+    Each layer is assigned distinctive layer ids
+    """
+    if var_name.startswith("downsample_layers"):
+        stage_id = int(var_name.split('.')[1])
+        layer_id = sum(depths[:stage_id]) + 1
+        return layer_id
+    
+    elif var_name.startswith("stages"):
+        stage_id = int(var_name.split('.')[1])
+        block_id = int(var_name.split('.')[2])
+        layer_id = sum(depths[:stage_id]) + block_id + 1
+        return layer_id
+    
+    else:
+        return sum(depths) + 1
+
+
+def get_num_layer_for_convnext(var_name):
+    """
+    Divide [3, 3, 27, 3] layers into 12 groups; each group is three 
+    consecutive blocks, including possible neighboring downsample layers;
+    adapted from https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py
+    """
+    num_max_layer = 12
+    if var_name.startswith("downsample_layers"):
+        stage_id = int(var_name.split('.')[1])
+        if stage_id == 0:
+            layer_id = 0
+        elif stage_id == 1 or stage_id == 2:
+            layer_id = stage_id + 1
+        elif stage_id == 3:
+            layer_id = 12
+        return layer_id
+
+    elif var_name.startswith("stages"):
+        stage_id = int(var_name.split('.')[1])
+        block_id = int(var_name.split('.')[2])
+        if stage_id == 0 or stage_id == 1:
+            layer_id = stage_id + 1
+        elif stage_id == 2:
+            layer_id = 3 + block_id // 3 
+        elif stage_id == 3:
+            layer_id = 12
+        return layer_id
+    else:
+        return num_max_layer + 1
+
+class LayerDecayValueAssigner(object):
+    def __init__(self, values, depths=[3,3,27,3], layer_decay_type='single'):
+        self.values = values
+        self.depths = depths
+        self.layer_decay_type = layer_decay_type
+
+    def get_scale(self, layer_id):
+        return self.values[layer_id]
+
+    def get_layer_id(self, var_name):
+        if self.layer_decay_type == 'single':
+            return get_num_layer_for_convnext_single(var_name, self.depths)
+        else:
+            return get_num_layer_for_convnext(var_name)
+
+
+def get_parameter_groups(model, weight_decay=1e-5, skip_list=(), get_num_layer=None, get_layer_scale=None):
+    parameter_group_names = {}
+    parameter_group_vars = {}
+
+    for name, param in model.named_parameters():
+        if not param.requires_grad:
+            continue  # frozen weights
+        if len(param.shape) == 1 or name.endswith(".bias") or name in skip_list or \
+            name.endswith(".gamma") or name.endswith(".beta"):
+            group_name = "no_decay"
+            this_weight_decay = 0.
+        else:
+            group_name = "decay"
+            this_weight_decay = weight_decay
+        if get_num_layer is not None:
+            layer_id = get_num_layer(name)
+            group_name = "layer_%d_%s" % (layer_id, group_name)
+        else:
+            layer_id = None
+
+        if group_name not in parameter_group_names:
+            if get_layer_scale is not None:
+                scale = get_layer_scale(layer_id)
+            else:
+                scale = 1.
+
+            parameter_group_names[group_name] = {
+                "weight_decay": this_weight_decay,
+                "params": [],
+                "lr_scale": scale
+            }
+            parameter_group_vars[group_name] = {
+                "weight_decay": this_weight_decay,
+                "params": [],
+                "lr_scale": scale
+            }
+
+        parameter_group_vars[group_name]["params"].append(param)
+        parameter_group_names[group_name]["params"].append(name)
+    return list(parameter_group_vars.values())
+
+
+def build_optimizer_convnextv2(cfg, model, get_num_layer=None, get_layer_scale=None, filter_bias_and_bn=True, skip_list=None):
+    opt_name = cfg.train.optimizer.name
+    weight_decay = cfg.train.weight_decay
+    # if weight_decay and filter_bias_and_bn:
+    if filter_bias_and_bn:
+        skip = {}
+        if skip_list is not None:
+            skip = skip_list
+        elif hasattr(model, 'no_weight_decay'):
+            skip = model.no_weight_decay()
+        parameters = get_parameter_groups(model, weight_decay, skip, get_num_layer, get_layer_scale)
+        weight_decay = 0.
+    else:
+        parameters = model.parameters()
+
+    if opt_name == 'adamw':
+        optimizer = optim.AdamW(parameters, lr=cfg.train.lr, weight_decay=weight_decay, betas=cfg.train.optimizer.betas, eps=cfg.train.optimizer.eps, )
+    else:
+        assert False and "Invalid optimizer"
+
+    return optimizer
+
+
+
+########################################################################################
+########################################################################################
+####################                                                ####################
 ####################                     swinv2                     ####################
 ####################                                                ####################
 ########################################################################################
@@ -317,10 +469,12 @@ def build_optimizer_cvt(cfg, model):
 ####################                                                ####################
 ########################################################################################
 ########################################################################################
-def build_optimizer(model_name, cfg, model):
+def build_optimizer(model_name, cfg, model, get_num_layer=None, get_layer_scale=None):
     if model_name in ['cvt', 'dcvt', 'rcvt']:
         return build_optimizer_cvt(cfg, model)
     elif model_name == 'swinv2':
         return build_optimizer_swinv2(config=cfg, model=model)
+    elif model_name == 'convnextv2':
+        return build_optimizer_convnextv2(cfg=cfg, model=model, get_num_layer=get_num_layer, get_layer_scale=get_layer_scale)
     else:
-        raise Exception('only cvt, dcvt, rcvt are supported')
+        raise Exception('only cvt, dcvt, rcvt, swinv2, convnextv2 are supported')

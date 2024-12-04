@@ -15,7 +15,10 @@ from DCvT import dcvt_13_224
 ########################################################################################
 ########################################################################################
 
-class LayerNorm(nn.Module):
+
+import numpy.random as random
+
+class LayerNormConvNext(nn.Module):
     """ LayerNorm that supports two data formats: channels_last (default) or channels_first. 
     The ordering of the dimensions in the inputs. channels_last corresponds to inputs with 
     shape (batch_size, height, width, channels) while channels_first corresponds to inputs 
@@ -54,7 +57,11 @@ class GRN(nn.Module):
         Nx = Gx / (Gx.mean(dim=-1, keepdim=True) + 1e-6)
         return self.gamma * (x * Nx) + self.beta + x
 
-class Block(nn.Module):
+#####
+# finetune
+#####
+
+class BlockConvnextv2(nn.Module):
     """ ConvNeXtV2 Block.
     
     Args:
@@ -64,7 +71,7 @@ class Block(nn.Module):
     def __init__(self, dim, drop_path=0.):
         super().__init__()
         self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, groups=dim) # depthwise conv
-        self.norm = LayerNorm(dim, eps=1e-6)
+        self.norm = LayerNormConvNext(dim, eps=1e-6)
         self.pwconv1 = nn.Linear(dim, 4 * dim) # pointwise/1x1 convs, implemented with linear layers
         self.act = nn.GELU()
         self.grn = GRN(4 * dim)
@@ -105,12 +112,12 @@ class ConvNeXtV2(nn.Module):
         self.downsample_layers = nn.ModuleList() # stem and 3 intermediate downsampling conv layers
         stem = nn.Sequential(
             nn.Conv2d(in_chans, dims[0], kernel_size=4, stride=4),
-            LayerNorm(dims[0], eps=1e-6, data_format="channels_first")
+            LayerNormConvNext(dims[0], eps=1e-6, data_format="channels_first")
         )
         self.downsample_layers.append(stem)
         for i in range(3):
             downsample_layer = nn.Sequential(
-                    LayerNorm(dims[i], eps=1e-6, data_format="channels_first"),
+                    LayerNormConvNext(dims[i], eps=1e-6, data_format="channels_first"),
                     nn.Conv2d(dims[i], dims[i+1], kernel_size=2, stride=2),
             )
             self.downsample_layers.append(downsample_layer)
@@ -120,7 +127,7 @@ class ConvNeXtV2(nn.Module):
         cur = 0
         for i in range(4):
             stage = nn.Sequential(
-                *[Block(dim=dims[i], drop_path=dp_rates[cur + j]) for j in range(depths[i])]
+                *[BlockConvnextv2(dim=dims[i], drop_path=dp_rates[cur + j]) for j in range(depths[i])]
             )
             self.stages.append(stage)
             cur += depths[i]
@@ -164,8 +171,8 @@ def convnextv2_nano(**kwargs):
     model = ConvNeXtV2(depths=[2, 2, 8, 2], dims=[80, 160, 320, 640], **kwargs)
     return model
 
-def convnextv2_tiny(**kwargs):
-    model = ConvNeXtV2(depths=[3, 3, 9, 3], dims=[96, 192, 384, 768], **kwargs)
+def convnextv2_tiny(num_classes=100, **kwargs):
+    model = ConvNeXtV2(depths=[3, 3, 9, 3], dims=[96, 192, 384, 768], num_classes=100, **kwargs)
     return model
 
 def pretrained_convnextv2_tiny():

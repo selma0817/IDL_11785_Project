@@ -80,6 +80,106 @@ def build_transform(input_size, crop_pct=None):
 ########################################################################################
 ########################################################################################
 ####################                                                ####################
+####################                   ConNeXtV2                    ####################
+####################                                                ####################
+########################################################################################
+########################################################################################
+import os
+from torchvision import datasets, transforms
+
+from timm.data.constants import \
+    IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
+from timm.data import create_transform
+
+def build_dataloader_convnextv2(is_train, cfg):
+    transform = build_transform_convnextv2(is_train, cfg)
+    if is_train:
+        dataset = build_imagenet100_dataset(transform, cfg.image_size[0], is_train)
+        print('built train dataloader')
+    else:
+        dataset = build_imagenet100_dataset(transform, cfg.image_size[0], is_train)
+        print('built val dataloader')
+    if is_train:
+        dataloader = torch.utils.data.DataLoader(
+            dataset, 
+            batch_size=cfg.train.batch_size,
+            num_workers=6,
+            pin_memory=True,
+            drop_last=True,
+            shuffle=True
+        )
+    else:
+        dataloader = torch.utils.data.DataLoader(
+            dataset, 
+            batch_size=cfg.train.batch_size,
+            num_workers=6,
+            pin_memory=True,
+            drop_last=False,
+            shuffle=False
+        )
+
+    mixup_fn = None
+    mixup_active = cfg.train.aug.mixup > 0 or cfg.train.aug.cutmix > 0. or cfg.train.aug.cutmix_minmax is not None
+    if mixup_active:
+        print("Mixup is activated!")
+        mixup_fn = Mixup(
+            mixup_alpha=cfg.train.aug.mixup, cutmix_alpha=cfg.train.aug.cutmix, cutmix_minmax=None,
+            prob=cfg.train.aug.mixup_prob, switch_prob=cfg.train.aug.mixup_switch_prob, mode=cfg.train.aug.mixup_mode,
+            label_smoothing=cfg.train.aug.smoothing, num_classes=cfg.num_classes)
+    
+    return dataloader
+
+
+def build_transform_convnextv2(is_train, cfg):
+    resize_im = cfg.image_size[0] > 32
+    mean = IMAGENET_DEFAULT_MEAN
+    std =  IMAGENET_DEFAULT_STD
+
+    if is_train:
+        # this should always dispatch to transforms_imagenet_train
+        transform = create_transform(
+            input_size=cfg.image_size,
+            is_training=True,
+            color_jitter=cfg.train.aug.color_jitter,
+            auto_augment=cfg.train.aug.aa,
+            interpolation=cfg.train.aug.train_interpolation,
+            re_prob=cfg.train.aug.reprob,
+            re_mode=cfg.train.aug.remode,
+            re_count=cfg.train.aug.recount,
+            mean=mean,
+            std=std,
+        )
+        if not resize_im:
+            transform.transforms[0] = transforms.RandomCrop(
+                cfg.image_size, padding=4)
+        return transform
+
+    t = []
+    if resize_im:
+        # warping (no cropping) when evaluated at 384 or larger
+        if cfg.image_size[0] >= 384:  
+            t.append(
+            transforms.Resize(cfg.image_size, 
+                            interpolation=transforms.InterpolationMode.BICUBIC), 
+        )
+            print(f"Warping {cfg.image_size} size input images...")
+        else:
+            if cfg.test.crop_pct == 'None':
+                crop_pct = 224 / 256
+            size = int(cfg.image_size[0] / crop_pct)
+            t.append(
+                # to maintain same ratio w.r.t. 224 images
+                transforms.Resize(size, interpolation=transforms.InterpolationMode.BICUBIC),  
+            )
+            t.append(transforms.CenterCrop(cfg.image_size[0]))
+
+    t.append(transforms.ToTensor())
+    t.append(transforms.Normalize(mean, std))
+    return transforms.Compose(t)
+
+########################################################################################
+########################################################################################
+####################                                                ####################
 ####################                   SwinV2                       ####################
 ####################                                                ####################
 ########################################################################################
@@ -344,5 +444,7 @@ def build_dataloader(model_name, cfg, is_train=True):
         return build_dataloader_cvt(cfg, is_train)
     elif model_name == 'swinv2':
         return build_dataloader_swinv2(config=cfg, is_train=is_train)
+    elif model_name == 'convnextv2':
+        return build_dataloader_convnextv2(is_train=is_train, cfg = cfg)
     else:
-        raise Exception('only cvt, dcvt, rcvt, swinv2 are supported')
+        raise Exception('only cvt, dcvt, rcvt, swinv2, convnextv2 are supported')

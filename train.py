@@ -20,7 +20,7 @@ import torch
 import torch.nn.parallel
 import torch.optim
 from torch.utils.collect_env import get_pretty_env_info
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
 print(device)
 
 from networks import build_model
@@ -31,6 +31,69 @@ from criterions import build_criterion
 from trainers import get_trainer, get_tester
 
 
+def get_num_layer_for_convnext_single(var_name, depths):
+    """
+    Each layer is assigned distinctive layer ids
+    """
+    if var_name.startswith("downsample_layers"):
+        stage_id = int(var_name.split('.')[1])
+        layer_id = sum(depths[:stage_id]) + 1
+        return layer_id
+    
+    elif var_name.startswith("stages"):
+        stage_id = int(var_name.split('.')[1])
+        block_id = int(var_name.split('.')[2])
+        layer_id = sum(depths[:stage_id]) + block_id + 1
+        return layer_id
+    
+    else:
+        return sum(depths) + 1
+
+
+def get_num_layer_for_convnext(var_name):
+    """
+    Divide [3, 3, 27, 3] layers into 12 groups; each group is three 
+    consecutive blocks, including possible neighboring downsample layers;
+    adapted from https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py
+    """
+    num_max_layer = 12
+    if var_name.startswith("downsample_layers"):
+        stage_id = int(var_name.split('.')[1])
+        if stage_id == 0:
+            layer_id = 0
+        elif stage_id == 1 or stage_id == 2:
+            layer_id = stage_id + 1
+        elif stage_id == 3:
+            layer_id = 12
+        return layer_id
+
+    elif var_name.startswith("stages"):
+        stage_id = int(var_name.split('.')[1])
+        block_id = int(var_name.split('.')[2])
+        if stage_id == 0 or stage_id == 1:
+            layer_id = stage_id + 1
+        elif stage_id == 2:
+            layer_id = 3 + block_id // 3 
+        elif stage_id == 3:
+            layer_id = 12
+        return layer_id
+    else:
+        return num_max_layer + 1
+
+class LayerDecayValueAssigner(object):
+    def __init__(self, values, depths=[3,3,27,3], layer_decay_type='single'):
+        self.values = values
+        self.depths = depths
+        self.layer_decay_type = layer_decay_type
+
+    def get_scale(self, layer_id):
+        return self.values[layer_id]
+
+    def get_layer_id(self, var_name):
+        if self.layer_decay_type == 'single':
+            return get_num_layer_for_convnext_single(var_name, self.depths)
+        else:
+            return get_num_layer_for_convnext(var_name)
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -81,12 +144,34 @@ def main():
         model = build_model(cfg.model.architecture)
     else:
         raise Exception('only train mode suppported, check the ipynbs for testing')
-    model.to(torch.device('cuda'))
+    model.to(torch.device(device))
+
+    # if convnextv2 initialize the assigner
+    if cfg.model.name == 'convnextv2':
+        if cfg.train.layer_decay < 1.0 or cfg.train.layer_decay > 1.0:
+            assert cfg.train.layer_decay_type in ['single', 'group']
+            if cfg.train.layer_decay_type == 'group': # applies for Base and Large models
+                num_layers = 12
+            else:
+                num_layers = sum(model.depths)
+            assigner = LayerDecayValueAssigner(
+                list(cfg.train.layer_decay ** (num_layers + 1 - i) for i in range(num_layers + 2)),
+                depths=model.depths, layer_decay_type=cfg.train.layer_decay_type)
+        else:
+            assigner = None
+        if assigner is not None:
+            print("Assigned values = %s" % str(assigner.values))
+    
+    
 
     # initialize optimizer
     # different for each model
+    # if convnextv2, pass in assigner parameters
     logging.info('=> building optimzer')
-    optimizer = build_optimizer(cfg.model.name, cfg, model)
+    if cfg.model.name == 'convnextv2':
+        optimizer = build_optimizer(cfg.model.name, cfg, model, get_num_layer=assigner.get_layer_id if assigner is not None else None, get_layer_scale=assigner.get_scale if assigner is not None else None)
+    else:
+        optimizer = build_optimizer(cfg.model.name, cfg, model)
 
     # define loss
     logging.info('=> building criterion')

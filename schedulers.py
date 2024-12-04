@@ -4,6 +4,26 @@ from __future__ import print_function
 ########################################################################################
 ########################################################################################
 ####################                                                ####################
+####################                   ConNeXtV2                    ####################
+####################                                                ####################
+########################################################################################
+########################################################################################
+
+def build_scheduler_convnextv2(cfg, optimizer, begin_epoch):
+    if 'method' not in cfg.train.scheduler:
+        raise ValueError('Please set train.scheduler.method!')
+    elif cfg.train.scheduler.method == 'timm':
+        args = cfg.train.scheduler.args
+        scheduler, _ = create_scheduler(args, optimizer)
+        scheduler.step(begin_epoch)
+    else:
+        raise ValueError('Unknown lr scheduler: {}'.format(
+            cfg.train.scheduler.method))
+    return scheduler
+
+########################################################################################
+########################################################################################
+####################                                                ####################
 ####################                     swinv2                     ####################
 ####################                                                ####################
 ########################################################################################
@@ -72,5 +92,7 @@ def build_scheduler(mode_name, cfg, optimizer, begin_epoch=None, n_iter_per_epoc
         return build_scheduler_cvt(cfg=cfg, optimizer=optimizer, begin_epoch=begin_epoch)
     elif mode_name == 'swinv2':
         return build_scheduler_swinv2(config=cfg, optimizer=optimizer, n_iter_per_epoch=n_iter_per_epoch)
+    elif mode_name == 'convnextv2':
+        return build_scheduler_convnextv2(cfg=cfg, optimizer=optimizer, begin_epoch=begin_epoch)
     else:
-        raise Exception('Only cvt and swinv2 supported.')
+        raise Exception('Only cvt, swinv2, convnextv2 supported.')

@@ -4,6 +4,188 @@ from __future__ import print_function
 ########################################################################################
 ########################################################################################
 ####################                                                ####################
+####################                   ConNeXtV2                    ####################
+####################                                                ####################
+########################################################################################
+########################################################################################
+import math
+from typing import Iterable, Optional
+
+import torch
+
+from timm.data import Mixup
+
+def adjust_learning_rate(optimizer, epoch, cfg):
+    """Decay the learning rate with half-cycle cosine after warmup"""
+    if epoch < cfg.train.warmup_epochs:
+        lr = cfg.train.lr * epoch / cfg.train.warmup_epochs 
+    else:
+        lr = cfg.train.min_lr + (cfg.train.lr - cfg.train.min_lr) * 0.5 * \
+            (1. + math.cos(math.pi * (epoch - cfg.train.warmup_epochs) / (cfg.train.epochs - cfg.train.warmup_epochs)))
+    for param_group in optimizer.param_groups:
+        if "lr_scale" in param_group:
+            param_group["lr"] = lr * param_group["lr_scale"]
+        else:
+            param_group["lr"] = lr
+    return lr
+
+def train_one_epoch_convnextv2(cfg, data_loader: Iterable, model: torch.nn.Module, criterion: torch.nn.Module,
+                    optimizer: torch.optim.Optimizer,
+                    epoch: int, scheduler=None, max_norm: float = 0, device='cuda:1'):
+    
+    mixup_fn = None
+    mixup_active = cfg.train.aug.mixup > 0 or cfg.train.aug.cutmix > 0. or cfg.train.aug.cutmix_minmax is not None
+    if mixup_active:
+        print("Mixup is activated!")
+        mixup_fn = Mixup(
+            mixup_alpha=cfg.train.aug.mixup, cutmix_alpha=cfg.train.aug.cutmix, cutmix_minmax=None,
+            prob=cfg.train.aug.mixup_prob, switch_prob=cfg.train.aug.mixup_switch_prob, mode=cfg.train.aug.mixup_mode,
+            label_smoothing=cfg.train.aug.smoothing, num_classes=cfg.num_classes)
+    
+    model.train()
+    use_amp = cfg.use_amp
+    optimizer.zero_grad()
+
+    loss_meter = AverageMeter()
+    acc1_meter = AverageMeter()
+    acc5_meter = AverageMeter()
+
+    batch_bar = tqdm(total=len(data_loader), dynamic_ncols=True, position=0, leave=False, desc='Training')
+    for data_iter_step, (samples, targets) in enumerate(data_loader):
+        # we use a per iteration (instead of per epoch) lr scheduler
+        adjust_learning_rate(optimizer, data_iter_step / len(data_loader) + epoch, cfg)
+
+        samples = samples.to(device, non_blocking=True)
+        targets = targets.to(device, non_blocking=True)
+        original_targets = targets.clone()
+
+        if mixup_fn is not None:
+            samples, targets = mixup_fn(samples, targets)
+
+        if use_amp:
+            with torch.amp.autocast('cuda'):
+                output = model(samples)
+                loss = criterion(output, targets)
+        else: # full precision
+            output = model(samples)
+            loss = criterion(output, targets)
+
+        loss_value = loss.item()
+
+        if not math.isfinite(loss_value):
+            print("Loss is {}, stopping training".format(loss_value))
+            assert math.isfinite(loss_value)
+
+        if use_amp:
+            # this attribute is added by timm on one optimizer (adahessian)
+            is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+            loss
+            grad_norm = loss_scaler(loss, optimizer, clip_grad=max_norm,
+                                    parameters=model.parameters(), create_graph=is_second_order,
+                                    update_grad=True)
+            optimizer.zero_grad()
+        else: # full precision
+            loss
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+        
+        torch.cuda.synchronize()
+
+        if mixup_fn is None:
+            class_acc = (output.max(-1)[-1] == targets).float().mean()
+        else:
+            class_acc = None
+        
+
+        acc1, acc5 = accuracy(output, original_targets, topk=(1, 5))
+        acc1_meter.update(acc1, original_targets.size(0))
+        acc5_meter.update(acc5, original_targets.size(0))
+
+        loss_meter.update(loss.item(), targets.size(0))
+
+        min_lr = 10.
+        max_lr = 0.
+
+        for group in optimizer.param_groups:
+            min_lr = min(min_lr, group["lr"])
+            max_lr = max(max_lr, group["lr"])
+        
+        weight_decay_value = None
+        for group in optimizer.param_groups:
+            if group["weight_decay"] > 0:
+                weight_decay_value = group["weight_decay"]
+        batch_bar.set_postfix(
+            loss="{:.04f}".format(loss_meter.avg), 
+            acc1="{:.04f}".format(acc1_meter.avg),
+            acc5="{:.04f}".format(acc5_meter.avg),
+            min_lr="{:.07f}".format(min_lr),
+            max_lr="{:.07f}".format(max_lr),
+            wd="{:.04f}".format(weight_decay_value),
+        )
+        batch_bar.update()
+        
+
+    return None, None, loss_meter.avg
+
+@torch.no_grad()
+def test_convnextv2(cfg, data_loader, model, criterion, device='cuda:1', use_amp=False):
+    criterion = torch.nn.CrossEntropyLoss()
+
+    loss_meter = AverageMeter()
+    acc1_meter = AverageMeter()
+    acc5_meter = AverageMeter()
+
+    # switch to evaluation mode
+    model.eval()
+
+    batch_bar = tqdm(total=len(data_loader), dynamic_ncols=True, position=0, leave=False, desc='Validating')
+    for idx, (images, target) in enumerate(data_loader):
+
+        images = images.to(device, non_blocking=True)
+        target = target.to(device, non_blocking=True)
+
+        # compute output
+        if use_amp:
+            with torch.amp.autocast('cuda'):
+                output = model(images)
+                if isinstance(output, dict):
+                    output = output['logits']
+                loss = criterion(output, target)
+        else:
+            output = model(images)
+            if isinstance(output, dict):
+                output = output['logits']
+            loss = criterion(output, target)
+
+        torch.cuda.synchronize()
+        
+        acc1, acc5 = accuracy(output, target, topk=(1, 5))
+
+        loss_meter.update(loss.item(), target.size(0))
+        acc1_meter.update(acc1, target.size(0))
+        acc5_meter.update(acc5, target.size(0))
+
+        batch_bar.set_postfix(
+            loss="{:.04f}".format(loss_meter.avg), 
+            prec1="{:.04f}".format(acc1_meter.avg), 
+            prec5="{:.04f}".format(acc5_meter.avg)
+        )
+        batch_bar.update()
+    
+    top1_acc, top5_acc, loss_avg = map(
+        lambda x: x.avg,
+        [acc1_meter, acc5_meter, loss_meter]
+    )
+
+    logging.info('=> switch to train mode')
+    model.train()
+
+    return acc1_meter.avg, acc5_meter.avg, loss_meter.avg
+
+########################################################################################
+########################################################################################
+####################                                                ####################
 ####################                   SwinV2                       ####################
 ####################                                                ####################
 ########################################################################################
@@ -468,12 +650,16 @@ def get_trainer(model_name='cvt'):
         return train_one_epoch_cvt
     elif model_name == 'swinv2':
         return train_one_epoch_swinv2
+    elif model_name == 'convnextv2':
+        return train_one_epoch_convnextv2
     else:
-        raise Exception('only cvt, dcvt, rcvt, swinv2 are supported')
+        raise Exception('only cvt, dcvt, rcvt, swinv2, convnextv2 are supported')
 def get_tester(model_name='cvt'):
     if model_name in ['cvt', 'dcvt', 'rcvt']:
         return test_cvt
     elif model_name == 'swinv2':
         return test_swinv2
+    elif model_name == 'convnextv2':
+        return test_convnextv2
     else:
-        raise Exception('only cvt, dcvt, rcvt, swinv2 are supported')
+        raise Exception('only cvt, dcvt, rcvt, swinv2, convnextv2, are supported')
