@@ -26,7 +26,7 @@ def build_imagenet_val_dataset(input_size):
 
     return dataset, nb_classes
 
-def build_imagenet100_dataset(transforms=None, input_size=224, is_train=False):
+def build_imagenet100_dataset(transforms=None, input_size=224, is_train=False, is_test=False):
     if transforms==None:
         transforms = build_transform(input_size)
     root = 'data/imagenet100' # change  data/imagenet100
@@ -42,7 +42,9 @@ def build_imagenet100_dataset(transforms=None, input_size=224, is_train=False):
             print(t)
     print("---------------------------")
     print("reading from datapath", root)
-    if is_train:
+    if is_test and not is_train: 
+        root = os.path.join(root, 'test_data')
+    elif is_train:
         root = os.path.join(root, 'train_data')
     else:
         root = os.path.join(root, 'val_data')
@@ -91,9 +93,12 @@ from timm.data.constants import \
     IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
 from timm.data import create_transform
 
-def build_dataloader_convnextv2(is_train, cfg):
+def build_dataloader_convnextv2(is_train, cfg, is_test=False):
     transform = build_transform_convnextv2(is_train, cfg)
-    if is_train:
+    if is_test and not is_train:
+        dataset = build_imagenet100_dataset(transform, cfg.image_size[0], is_train, is_test)
+        print('built test dataloader')
+    elif is_train:
         dataset = build_imagenet100_dataset(transform, cfg.image_size[0], is_train)
         print('built train dataloader')
     else:
@@ -377,7 +382,7 @@ def build_transforms_cvt(cfg, is_train=True):
 
         transforms = T.Compose(ts)
 
-def build_dataloader_cvt(cfg, is_train=False):
+def build_dataloader_cvt(cfg, is_train=False, is_test=False):
     if is_train:
         batch_size = cfg.train.batch_size
         shuffle = True
@@ -386,7 +391,7 @@ def build_dataloader_cvt(cfg, is_train=False):
         shuffle = False
     
     transforms = build_transforms_cvt(cfg)
-    dataset = build_imagenet100_dataset(transforms=transforms, input_size=cfg.train.image_size[0], is_train=is_train)
+    dataset = build_imagenet100_dataset(transforms=transforms, input_size=cfg.train.image_size[0], is_train=is_train, is_test=is_test)
 
     if cfg.aug.timm_aug.use_loader and is_train:
         print('scale is', cfg.aug.scale, type(cfg.aug.scale))
@@ -439,9 +444,9 @@ def build_dataloader_cvt(cfg, is_train=False):
 ####################                                                ####################
 ########################################################################################
 ########################################################################################
-def build_dataloader(model_name, cfg, is_train=True):
+def build_dataloader(model_name, cfg, is_train=True, is_test=False):
     if model_name in ['cvt', 'dcvt', 'rcvt']:
-        return build_dataloader_cvt(cfg, is_train)
+        return build_dataloader_cvt(cfg, is_train, is_test)
     elif model_name == 'swinv2':
         return build_dataloader_swinv2(config=cfg, is_train=is_train)
     elif model_name == 'convnextv2':

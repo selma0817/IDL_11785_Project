@@ -20,10 +20,10 @@ import torch
 import torch.nn.parallel
 import torch.optim
 from torch.utils.collect_env import get_pretty_env_info
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
 print(device)
 from datetime import datetime
-from fvcore.nn import FlopCountAnalysis
+# from fvcore.nn import FlopCountAnalysis
 
 from networks import build_model
 from optimizers import build_optimizer
@@ -166,10 +166,6 @@ def main():
             assigner = None
         if assigner is not None:
             print("Assigned values = %s" % str(assigner.values))
-    
-    
-
-
 
     # initialize optimizer
     # different for each model
@@ -209,21 +205,23 @@ def main():
     """
 
     # create unique folder with datatime of job for each run so we don't overwrite prev checkpoints
-    curr_time = datetime.now().strftime("%Y%m%d-%H%M%S")
-    checkpoint_dir = os.path.join('/ix1/hkarim/yip33/IDL_11785_project','checkpoints', cfg.model.name, cfg.train.save_dir, curr_time)
-    logging.info(f'=> checkpoints dir: {checkpoint_dir}')
-    os.makedirs(checkpoint_dir, exist_ok=True)
+    
+    # curr_time = datetime.now().strftime("%Y%m%d-%H%M%S")
+    checkpoint_dir = '/home/ray/proj/IDL_11785_Project/checkpoints/convnextv2/test1'
+    # logging.info(f'=> checkpoints dir: {checkpoint_dir}')
+    # os.makedirs(checkpoint_dir, exist_ok=True)
 
-    scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
+    # scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
 
      # scaler = torch.amp.GradScaler('cuda', enabled=cfg.amp)
     
     # logging flops
-    dummy_input = torch.randn((1, 3, 224, 224)).cuda(non_blocking=True)
-    flops = FlopCountAnalysis(model, dummy_input)
-    flops_total = flops.total()
-    flops_module_operator = flops.by_module_and_operator() 
-    logger.info(f"=>flops total '{flops_total}', flops_module_operator {flops_module_operator}")
+    
+    # dummy_input = torch.randn((1, 3, 224, 224)).cuda(non_blocking=True)
+    # flops = FlopCountAnalysis(model, dummy_input)
+    # flops_total = flops.total()
+    # flops_module_operator = flops.by_module_and_operator() 
+    # logger.info(f"=>flops total '{flops_total}', flops_module_operator {flops_module_operator}")
 
 
     ## handle resume in training
@@ -236,7 +234,6 @@ def main():
             scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
             best_perf = checkpoint.get('best_perf', 0.0)
             logging.info(f"=> Loaded checkpoint '{args.resume}' (epoch {begin_epoch})")
-
         else:
             logging.error(f"=> No checkpoint found at '{args.resume}'")
             raise FileNotFoundError(f"Checkpoint '{args.resume}' does not exist.")
@@ -250,7 +247,7 @@ def main():
     run = wandb.init(
         name = cfg.model.architecture+"_"+cfg.train.save_dir, ## Wandb creates random run names if you skip this field
         #reinit = True, ### Allows reinitalizing runs when you re-run this cell
-        id = "00g5anil", ### Insert specific run id here if you want to resume a previous run
+        id = "convnextv2_tiny_test1", ### Insert specific run id here if you want to resume a previous run
         resume = True, ### You need this to resume previous runs, but comment out reinit = True when using this
         project = args.run_id, ### Project should be created in your wandb account
         config = cfg ### Wandb Config for your run
@@ -288,14 +285,16 @@ def main():
             .format(head, time.time()-val_start)
         )
         # scheduler.step(epoch=epoch+1)
+        """
         if cfg.train.scheduler.method == 'timm':
             # lr = scheduler.get_epoch_values(epoch+1)[0]
             lr = scheduler._get_lr(epoch+1)[0]
         else:
             lr = scheduler._get_lr(epoch+1)[0]
         logging.info(f'=> lr: {lr}')
+        """
 
-        print("\tTrain Loss {:.04f}\t Learning Rate {:.07f}".format(loss_train, lr))
+        # print("\tTrain Loss {:.04f}\t Learning Rate {:.07f}".format(loss_train, lr))
         print("\tVal Top1 {:.04f}%\tVal Top5 {:.04f}%\t Val Loss {:.04f}".format(top1_val, top5_val, loss_val))
 
         wandb.log({
@@ -303,7 +302,7 @@ def main():
             'valid_top1': top1_val,
             'valid_top5': top5_val,
             'valid_loss': loss_val,
-            'lr'        : lr
+            #'lr'        : lr
         })
 
         # save model
