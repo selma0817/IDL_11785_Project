@@ -20,7 +20,7 @@ import torch
 import torch.nn.parallel
 import torch.optim
 from torch.utils.collect_env import get_pretty_env_info
-device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(device)
 from datetime import datetime
 # from fvcore.nn import FlopCountAnalysis

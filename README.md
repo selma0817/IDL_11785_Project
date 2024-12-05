@@ -4,7 +4,7 @@
 ## Go to instructions for more details
 
 ## Introduction
-Our goal is to improve  CvT for classification problem to improve accuracy of classification task on MC-COCO dataset
+Our goal is to improve  CvT for classification problem to improve accuracy of classification task on ImageNet100 dataset
 
 ## Innovation 
 1. Multi-Scale Feature Extraction
@@ -27,8 +27,7 @@ We successfully loaded the pretrained CvT-13 and CvT-21 to test on  ImageNet 1k 
 
 
 ## Todo List
-1. load pretrained ViT and ConvNext to check their performance on ImageNet 1k Validation dataset
-2. implement innovation starting from switching to Multi-Scale Feature Extraction
+1. test accuracy and FLOPs on test set
 
 
 
